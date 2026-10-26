@@ -24,7 +24,7 @@ FinGuard 是面向金融任务的智能体系统，目标是在明确授权内�
 
 1. 阅读[原始框架](docs/sources/project-framework.txt)，了解完整范围。
 2. 阅读[系统架构](docs/architecture.md)和[领域模型](docs/domain-model.md)，明确模块边界。
-3. 按[开发路线](docs/roadmap.md)逐阶段实现，使用[验收要求](tests/README.md)检查结果。
+3. 按[开发路线](docs/roadmap.md)和[实施步骤](docs/implementation-plan.md)推进，使用[验收要求](tests/README.md)检查结果。
 4. 首阶段处理[待定决策](docs/decisions.md)，再建立源码和测试入口。
 
 当前无需安装依赖，也没有启动命令。首个开发切片使用本地模拟业务，具体技术栈在开始实现时确定。
@@ -37,6 +37,7 @@ FinGuard 是面向金融任务的智能体系统，目标是在明确授权内�
 | [docs/architecture.md](docs/architecture.md) | 职责划分、执行链路和信任边界 |
 | [docs/domain-model.md](docs/domain-model.md) | 核心对象、状态和关联规则 |
 | [docs/roadmap.md](docs/roadmap.md) | 开发顺序、阶段产物和验收条件 |
+| [docs/implementation-plan.md](docs/implementation-plan.md) | 具体步骤、首批编码任务和里程碑 |
 | [docs/decisions.md](docs/decisions.md) | 已确定原则和待定工程选型 |
 | [docs/sources/project-framework.txt](docs/sources/project-framework.txt) | 用户提供的完整原文 |
 | [src/README.md](src/README.md) | 源码职责映射，后续逐步建立模块 |
