@@ -1,0 +1,54 @@
+{
+  "fixture_format_version": "0.1",
+  "scenario_id": "transfer-basic",
+  "fixture_only": true,
+  "description": "虚构转账场景草案；不是运行配置或有效授权，加载器尚未实现。",
+  "user_request": "给小王转 300 元，转完至少保留 1000 元。",
+  "initial_state": {
+    "subject_ref": "user-demo-001",
+    "source_account_ref": "account-demo-001",
+    "recipient_ref": "recipient-demo-wang",
+    "recipient_confirmed": true,
+    "currency": "CNY",
+    "source_balance_minor": 150000,
+    "ledger_entries": []
+  },
+  "operation_draft": {
+    "operation_ref": "operation-demo-transfer-001",
+    "action": "transfer.create",
+    "source_account_ref": "account-demo-001",
+    "recipient_ref": "recipient-demo-wang",
+    "amount_minor": 30000,
+    "currency": "CNY",
+    "fee_minor": 0,
+    "minimum_remaining_balance_minor": 100000
+  },
+  "simulated_events": [
+    {
+      "type": "USER_CONFIRMS_OPERATION",
+      "subject_ref": "user-demo-001",
+      "operation_ref": "operation-demo-transfer-001",
+      "note": "未来测试需将确认转换为服务端授权记录，不能直接把此事件作为授权凭据。"
+    },
+    {
+      "type": "ADAPTER_CONFIRMS_TRANSFER",
+      "operation_ref": "operation-demo-transfer-001",
+      "transaction_ref": "transaction-demo-001",
+      "transaction_status": "SUCCEEDED"
+    }
+  ],
+  "expected_result": {
+    "task_status": "COMPLETED",
+    "operation_status": "SUCCEEDED",
+    "source_balance_minor": 120000,
+    "source_debit_count": 1,
+    "effective_authorization_required": true,
+    "minimum_remaining_balance_satisfied": true,
+    "evidence_required": [
+      "transaction_status",
+      "ledger_entry",
+      "balance_after_transfer"
+    ],
+    "success_report_requires_verified_evidence": true
+  }
+}
