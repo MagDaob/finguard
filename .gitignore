@@ -19,6 +19,14 @@
 *.log
 
 # 编辑器临时文件。
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 .DS_Store
 Thumbs.db
 *.swp

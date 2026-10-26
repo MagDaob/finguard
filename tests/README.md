@@ -1,6 +1,32 @@
 # 验证要求
 
-当前只有[模拟转账场景数据](scenarios/transfer-basic.json)，尚无测试框架、场景加载器或可运行测试。以下内容为后续实现的验收要求。
+当前已建立领域、状态、工具契约、场景加载和命令行测试。[模拟转账场景](scenarios/transfer-basic.json)已可加载；当前命令不执行交易。
+
+## 运行方式与本次验证
+
+在项目根目录执行：
+
+```powershell
+uv sync --locked --group dev
+uv run --locked pytest -q
+uv run --locked ruff check .
+uv run --locked ruff format --check .
+uv run --locked finguard validate-scenario --config configs/development.example.toml
+```
+
+2026 年 10 月 26 日，在 Windows 的 Python 3.12.10 和 3.14.0 环境中，123 个测试均通过。另已完成源码包、wheel 安装包构建，以及独立环境中的安装包命令验证。
+
+| 文件 | 已覆盖内容 |
+|---|---|
+| [test_values.py](test_values.py) | 金额类型与范围、资源归属、引用生成和不可变值 |
+| [test_models.py](test_models.py) | 参数缺失、对象关联、依赖图、授权时间和证据结构 |
+| [test_states.py](test_states.py) | 终态封闭、授权前置状态、未知结果和取消边界 |
+| [test_tools.py](test_tools.py) | 未知与重复工具、能力冲突、查询关联和外部字段注入 |
+| [test_scenarios.py](test_scenarios.py) | 场景一致性、恶意文本作为数据、配置路径和命令退出码 |
+
+自动检查配置见 [checks.yml](../.github/workflows/checks.yml)，目标为 Windows、Linux 和 Python 3.12 至 3.14。配置存在不代表远端任务已执行成功，实际结果以 GitHub Actions 为准。
+
+当前测试证明领域规则和契约行为。持久化幂等、业务授权、并发资金控制、重启恢复和真实证据验证尚未实现。
 
 ## 系统不变量
 

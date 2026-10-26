@@ -2,7 +2,7 @@
   "fixture_format_version": "0.1",
   "scenario_id": "transfer-basic",
   "fixture_only": true,
-  "description": "虚构转账场景草案；不是运行配置或有效授权，加载器尚未实现。",
+  "description": "虚构转账场景；仅用于结构与一致性校验，不是有效授权或真实业务记录。",
   "user_request": "给小王转 300 元，转完至少保留 1000 元。",
   "initial_state": {
     "subject_ref": "user-demo-001",

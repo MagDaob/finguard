@@ -1,21 +1,16 @@
 # 源码组织
 
-当前目录尚无业务代码。语言与包结构在首个实现阶段确定，下表为职责映射；表中的模块名尚未建立为目录。
+当前使用 `finguard` Python 包。所有模块均可通过项目环境导入。
 
-| 拟议模块 | 职责 |
+| 已有位置 | 职责 |
 |---|---|
-| `domain` | 核心对象、金额、约束和状态迁移 |
-| `tools` | 工具元数据、输入输出和能力契约 |
-| `planning` | 计划编译、版本、依赖和调度 |
-| `control` | 数据范围、策略、授权匹配和提交前检查 |
-| `execution` | 操作持久化、提交、幂等、核实和恢复 |
-| `adapters` | 模拟业务与外部服务适配器 |
-| `agents` | 意图解析、主规划、专业分析和计划审查 |
-| `verification` | 业务证据和任务成功条件验证 |
-| `observability` | 结构化轨迹、脱敏和诊断信息 |
-| `evaluation` | 场景回放、故障注入和离线比较 |
-| `infrastructure` | 存储、队列、模型客户端等具体实现 |
+| [finguard/domain/values.py](finguard/domain/values.py) | 整数分金额、币种、引用编号、资源归属和基础模型 |
+| [finguard/domain/models.py](finguard/domain/models.py) | 五个核心对象、转账参数、计划依赖和对象关联 |
+| [finguard/domain/states.py](finguard/domain/states.py) | 任务和操作的独立状态图与迁移守卫 |
+| [finguard/domain/errors.py](finguard/domain/errors.py) | 可分类的领域错误 |
+| [finguard/tools/registry.py](finguard/tools/registry.py) | 工具元数据、能力约束和输入输出校验 |
+| [finguard/tools/transfer.py](finguard/tools/transfer.py) | 转账提交与状态查询契约 |
+| [finguard/scenarios.py](finguard/scenarios.py) | 虚构转账场景加载与一致性检查 |
+| [finguard/cli.py](finguard/cli.py) | 场景校验命令与配置读取 |
 
-领域规则保持独立。外部接口通过契约接入，认知模块通过计划进入控制与执行链路。
-
-按[开发路线](../docs/roadmap.md)增加实际模块，避免一次生成大量占位代码。
+认知、控制、执行、适配器、存储和评估模块按[实施步骤](../docs/implementation-plan.md)逐步增加。当前工具契约没有业务调用入口。

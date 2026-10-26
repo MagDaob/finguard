@@ -1,0 +1,3 @@
+# 供场景校验命令读取的本地开发配置；不包含真实业务凭据。
+[scenario]
+path = "../tests/scenarios/transfer-basic.json"
