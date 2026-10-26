@@ -763,6 +763,12 @@ class Backend:
         statuses = [row["status"] for row in rows]
         if statuses and all(status == O.SUCCEEDED.value for status in statuses):
             target = T.COMPLETED
+        elif any(status in {O.SUBMITTING.value, O.UNKNOWN.value} for status in statuses):
+            target = (
+                T.PARTIALLY_COMPLETED
+                if any(status == O.SUCCEEDED.value for status in statuses)
+                else T.EXECUTING
+            )
         elif task["stop_requested"] and not any(
             status in {O.SUBMITTING.value, O.UNKNOWN.value} for status in statuses
         ):
@@ -775,8 +781,6 @@ class Backend:
             )
         elif any(status == O.SUCCEEDED.value for status in statuses):
             target = T.PARTIALLY_COMPLETED
-        elif any(status in {O.SUBMITTING.value, O.UNKNOWN.value} for status in statuses):
-            target = T.EXECUTING
         elif any(status in {O.WAITING_APPROVAL.value, O.AUTHORIZED.value} for status in statuses):
             target = T.WAITING_APPROVAL
         else:

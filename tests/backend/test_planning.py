@@ -5,7 +5,7 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from finguard.backend.catalog import Constraints, Step, normalize_steps
+from finguard.backend.catalog import Constraints, ProductArguments, Step, normalize_steps
 from finguard.backend.errors import ServiceError
 from finguard.backend.planning import BaselinePlanner, GatewayPlanner, compile_candidate
 
@@ -95,3 +95,19 @@ def test_funds_condition_requires_same_account_redemption():
 def test_negative_or_unsupported_condition_requires_clarification():
     steps, _, questions = BaselinePlanner().infer("不要给小王转300元", {}, Constraints())
     assert not steps and questions
+
+
+def test_product_plan_records_currency_explicitly():
+    args = {
+        "account_ref": "account-demo-001",
+        "product_ref": "fund-demo",
+        "amount_minor": 100,
+        "fee_minor": 0,
+        "minimum_remaining_balance_minor": 0,
+    }
+    normalized = normalize_steps(
+        (Step(step_ref="redeem", action="product.redeem", arguments=args),), Constraints()
+    )
+    assert normalized[0]["arguments"]["currency"] == "CNY"
+    with pytest.raises(ValidationError):
+        ProductArguments.model_validate({**args, "currency": "USD"})

@@ -10,7 +10,14 @@ from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
 from finguard.backend.errors import ServiceError, require
 from finguard.domain.models import TransferParameters
-from finguard.domain.values import DomainModel, Minor, PositiveMinor, Reference, RequestText
+from finguard.domain.values import (
+    Currency,
+    DomainModel,
+    Minor,
+    PositiveMinor,
+    Reference,
+    RequestText,
+)
 
 
 def canonical(value: Any) -> str:
@@ -42,6 +49,7 @@ class SubscriptionArguments(DomainModel):
 
 class ProductArguments(AccountArguments):
     product_ref: Reference
+    currency: Currency = "CNY"
     amount_minor: PositiveMinor
     fee_minor: Minor
     minimum_remaining_balance_minor: Minor

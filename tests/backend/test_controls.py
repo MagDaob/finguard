@@ -121,3 +121,31 @@ def test_parameter_change_revokes_old_approval(backend, actor, transfer_args):
             ),
         )
     assert exc.value.code == "TERMINAL_OPERATION"
+
+
+def test_unknown_operation_prevents_early_task_termination(backend, actor, transfer_args):
+    steps = tuple(
+        Step(step_ref=f"transfer-{i}", action="transfer.create", arguments=transfer_args)
+        for i in range(2)
+    )
+    task = backend.create_task(
+        actor,
+        TaskCreate(
+            client_request_ref="mixed-failure",
+            user_request="两笔虚构转账，每笔须满足保留余额",
+            steps=steps,
+        ),
+    )
+    for op in task["operations"]:
+        backend.approve(actor, op["operation_ref"], ApprovalRequest(expected_digest=op["digest"]))
+    first = next(op for op in task["operations"] if op["step_ref"] == "transfer-0")
+    backend.bank.inject_fault(first["operation_ref"], "response_lost")
+    result = backend.run(actor, task["task_ref"])
+    assert result["status"] == "EXECUTING" and {op["status"] for op in result["operations"]} == {
+        "UNKNOWN",
+        "FAILED",
+    }
+    backend.recover()
+    result = backend.get_task(actor, task["task_ref"])
+    assert result["status"] == "PARTIALLY_COMPLETED" and not result["verified_success"]
+    assert {op["status"] for op in result["operations"]} == {"SUCCEEDED", "FAILED"}

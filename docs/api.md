@@ -109,7 +109,7 @@
 | `accounts.balance` | `account_ref` | 当前现金余额及币种；读操作仍需权限 |
 | `bills.analyze` | `account_ref`、`days`（1 至 366，默认 30） | 按入账日期统计支出、退款、净额及分类，退款计入入账期 |
 | `transfer.create` | 付款账户、收款人、金额、币种、费用、最低保留余额 | 原子更新双方余额，生成可核对流水 |
-| `product.subscribe` | `account_ref`、`product_ref`、`amount_minor`、`fee_minor`、`minimum_remaining_balance_minor` | 风险与交易窗口检查；固定价值即时确认 |
+| `product.subscribe` | `account_ref`、`product_ref`、`amount_minor`、`currency`（默认 `CNY`）、`fee_minor`、`minimum_remaining_balance_minor` | 风险与交易窗口检查；固定价值即时确认 |
 | `product.redeem` | 与申购相同 | 先减少可用持仓，等待模拟结算；到账才确认成功，结算失败恢复持仓 |
 | `card.set_lock` | `card_ref`、`locked` | 临时锁定或恢复，不代表永久挂失或销卡 |
 | `subscription.cancel` | `subscription_ref` | 立即取消模拟商户合同，退款为零，代扣授权保持原状 |
