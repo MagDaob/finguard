@@ -24,7 +24,7 @@ uv run --locked finguard validate-scenario --config configs/development.example.
 | [test_tools.py](test_tools.py) | 未知与重复工具、能力冲突、查询关联和外部字段注入 |
 | [test_scenarios.py](test_scenarios.py) | 场景一致性、恶意文本作为数据、配置路径和命令退出码 |
 
-自动检查配置见 [checks.yml](../.github/workflows/checks.yml)，目标为 Windows、Linux 和 Python 3.12 至 3.14。配置存在不代表远端任务已执行成功，实际结果以 GitHub Actions 为准。
+自动检查配置见 [checks.yml](../.github/workflows/checks.yml)，目标为 Windows、Linux 和 Python 3.12 至 3.14。支持提交、拉取请求和手动运行。配置存在不代表远端任务已执行成功，实际结果以 GitHub Actions 为准。
 
 当前测试证明领域规则和契约行为。持久化幂等、业务授权、并发资金控制、重启恢复和真实证据验证尚未实现。
 
