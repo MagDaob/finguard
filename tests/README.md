@@ -1,78 +1,57 @@
 # 验证要求
 
-当前已建立领域、状态、工具契约、场景加载和命令行测试。[模拟转账场景](scenarios/transfer-basic.json)已可加载；当前命令不执行交易。
+当前覆盖领域规则、模拟银行、持久化授权与执行、HTTP 接口、计划控制、回放和策略发布。全部业务输入为虚构数据。实际执行记录见[后端验收](../docs/backend-validation.md)。
 
-## 运行方式与本次验证
+## 执行方式
 
-在项目根目录执行：
+在项目根目录安装开发依赖，配置可创建命名空间的 PostgreSQL 测试数据库，然后运行：
 
 ```powershell
 uv sync --locked --group dev
+$env:FINGUARD_REQUIRE_POSTGRES = '1'
 uv run --locked pytest -q
 uv run --locked ruff check .
 uv run --locked ruff format --check .
-uv run --locked finguard validate-scenario --config configs/development.example.toml
+uv run --locked finguard replay --suite tests/scenarios/backend-replay.json
+uv build --no-sources
 ```
 
-2026 年 10 月 26 日，在 Windows 的 Python 3.12.10 和 3.14.0 环境中，123 个测试均通过。另已完成源码包、wheel 安装包构建，以及独立环境中的安装包命令验证。
+Windows 可使用[本机 PostgreSQL 脚本](../scripts/local-postgres.ps1)。未配置数据库时默认跳过标记为 `postgres` 的测试；强制模式将缺少配置视为失败。已配置但连接失败不会被静默跳过。
 
-| 文件 | 已覆盖内容 |
+只执行无数据库测试：`uv run --locked pytest -q -m "not postgres"`。只执行数据库测试：`uv run --locked pytest -q -m postgres`。
+
+每个数据库测试创建随机 `fg_test_` 命名空间，每个回放用例创建随机 `fg_replay_` 命名空间。清理只针对本次创建的目标，不重置运行中的演示库。测试角色需要相应建表权限，应使用专用测试实例。
+
+## 检查分布
+
+| 文件 | 验证内容 |
 |---|---|
-| [test_values.py](test_values.py) | 金额类型与范围、资源归属、引用生成和不可变值 |
-| [test_models.py](test_models.py) | 参数缺失、对象关联、依赖图、授权时间和证据结构 |
-| [test_states.py](test_states.py) | 终态封闭、授权前置状态、未知结果和取消边界 |
-| [test_tools.py](test_tools.py) | 未知与重复工具、能力冲突、查询关联和外部字段注入 |
-| [test_scenarios.py](test_scenarios.py) | 场景一致性、恶意文本作为数据、配置路径和命令退出码 |
+| `test_values.py`、`test_models.py`、`test_states.py` | 金额、对象关系、计划图和状态迁移 |
+| `test_tools.py`、`test_scenarios.py` | 工具契约、输入注入、场景和退出码 |
+| [backend/test_bank.py](backend/test_bank.py) | 真实 PostgreSQL 并发、同操作幂等、账户竞争、账单和产品语义 |
+| [backend/test_service.py](backend/test_service.py) | 授权、停止、参数变更、部分完成、故障恢复和证据 |
+| [backend/test_controls.py](backend/test_controls.py) | 委托频次、撤销、到期、预算释放和旧授权失效 |
+| [backend/test_api.py](backend/test_api.py) | 认证、端到端任务、归属、文档、请求限制和评估开关 |
+| [backend/test_planning.py](backend/test_planning.py) | 模型网关协议、非法候选、依赖和目标范围 |
+| [backend/test_evaluation.py](backend/test_evaluation.py) | 回放隔离、不变量、失败草案、模拟模型对照评估和回退 |
+| [backend/test_process_recovery.py](backend/test_process_recovery.py) | 实际 HTTP 进程停止与重启，核实已生效付款且只记账一次 |
 
-自动检查配置见 [checks.yml](../.github/workflows/checks.yml)，目标为 Windows、Linux 和 Python 3.12 至 3.14。支持提交、拉取请求和手动运行。配置存在不代表远端任务已执行成功，实际结果以 GitHub Actions 为准。
+## 系统不变量与故障
 
-当前测试证明领域规则和契约行为。持久化幂等、业务授权、并发资金控制、重启恢复和真实证据验证尚未实现。
+检查无授权写入、参数绑定、重复记账、余额与预算竞争、主体隔离、证据完整、权限注入和恢复身份。回放额外比较期初余额、流水净额与当前余额。
 
-## 系统不变量
+故障包括发送前失败、银行已生效但响应丢失、提交前后进程中断、响应结构异常、查询暂时未知、重复回调、授权到期撤销、金额修改、结算后余额条件变化及证据缺失。单元故障使用持久化脚本；HTTP 进程测试实际重启服务。
 
-1. 没有有效授权，写操作不得生效。
-2. 执行参数必须处于授权范围内。
-3. 同一业务操作不得因重试重复记账。
-4. 不得通过并发操作突破余额或授权限额。
-5. 不得访问其他用户的数据。
-6. 没有业务证据，不得报告成功。
-7. 外部文本不得改变工具权限或授权状态。
-8. 系统恢复后，已完成操作不得被当作未执行操作重放。
+测试并非生产正确性的穷尽证明。当前没有随机属性测试、大规模压力测试、真实银行合同测试或真实模型质量评估。FastAPI 的 TestClient 目前发出 HTTPX 适配弃用警告，不影响当前检查结果。
 
-## 测试分层
+## 回放和指标
 
-| 层次 | 验证内容 |
-|---|---|
-| 单元测试 | 金额、约束、授权匹配和状态迁移 |
-| 契约测试 | 工具、适配器、输入输出及异常语义 |
-| 属性测试 | 随机操作序列中的系统不变量 |
-| 并发测试 | 重复提交、竞争支出和授权重复消费 |
-| 故障恢复测试 | 超时、重启、重复回调和未知状态 |
-| 智能体评估 | 意图理解、计划正确性和澄清质量 |
-| 端到端测试 | 用户目标完成情况及额外副作用 |
+[backend-replay.json](scenarios/backend-replay.json)包含有效确认、缺少授权、响应丢失、提交前中断及赎回到账后转账。回放事件仅作用于隔离的虚构数据。
 
-## 故障清单
+固定目标回放检查控制与执行行为；`replay --model` 重新调用配置的模型网关。合法任务完成率只包含预期应完成的用例，正确处理率包括等待和拒绝。优化对照评估检查候选与当前基线，发布仍需明确审核；模拟网关结果不能表述为真实模型效果。
 
-后续逐项增加场景，不把以下清单视为已覆盖测试：
+## 持续集成
 
-- 请求发送前断网。
-- 操作已生效，但响应丢失。
-- 同一请求重复到达。
-- 回调重复或乱序。
-- 用户确认后余额变化。
-- 两个任务同时支出或消费同一授权。
-- 提交附近发生服务重启。
-- 下游响应结构变化。
-- 工具输出夹带试图改变权限的指令。
-- 授权过期、撤销或关键参数变化。
-- 多服务任务部分成功，补偿不可用或需要新授权。
+[checks.yml](../.github/workflows/checks.yml)在 Windows、Linux 和 Python 3.12 至 3.14 上检查无数据库部分；Linux 的 Python 3.12、3.14 使用 PostgreSQL 18 检查后端，并单独构建容器。CI 数据库是隔离的临时实例，仅用于虚构数据。
 
-检查最终账本、授权消费、操作状态和证据，不以界面提示作为唯一依据。
-
-## 回放与指标
-
-回放包需要初始业务状态、用户确认事件、工具返回或故障脚本、模型与提示词版本、工具与规则版本，以及预期最终状态。
-
-固定模型输出回放验证控制与执行代码。重新调用模型的回放评估规划策略变化。两种结果分别记录。
-
-业务完成率衡量合法且信息充分的任务能否完成。正确处置率衡量信息不足、权限不足或无法执行时的处理是否正确。拒绝或等待澄清不能直接计为业务完成。
+本地与远端结果分别核实。配置存在不代表执行成功，提交对应结果见 GitHub Actions。

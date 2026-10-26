@@ -1,4 +1,4 @@
-"""本地场景结构校验入口。"""
+"""场景校验、后端管理、服务运行和离线回放入口。"""
 
 import argparse
 import json
@@ -28,7 +28,12 @@ def main(argv: list[str] | None = None) -> int:
     inputs = validate.add_mutually_exclusive_group(required=True)
     inputs.add_argument("--scenario", type=Path, help="场景 JSON 文件")
     inputs.add_argument("--config", type=Path, help="开发配置 TOML 文件")
+    from finguard.backend.commands import register_commands, run_command
+
+    register_commands(commands)
     args = parser.parse_args(argv)
+    if args.command != "validate-scenario":
+        return run_command(args)
     try:
         scenario_path = args.scenario
         if args.config:

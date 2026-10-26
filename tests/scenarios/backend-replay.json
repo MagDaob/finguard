@@ -1,0 +1,211 @@
+{
+  "format_version": "1",
+  "cases": [
+    {
+      "case_ref": "transfer-approved",
+      "request": {
+        "client_request_ref": "transfer-approved",
+        "user_request": "虚构数据回放：给小王转 300 元，至少保留 1000 元。",
+        "steps": [
+          {
+            "step_ref": "transfer",
+            "action": "transfer.create",
+            "arguments": {
+              "source_account_ref": "account-demo-001",
+              "recipient_ref": "recipient-demo-wang",
+              "amount_minor": 30000,
+              "currency": "CNY",
+              "fee_minor": 0,
+              "minimum_remaining_balance_minor": 100000
+            }
+          }
+        ]
+      },
+      "events": [
+        {
+          "kind": "approve"
+        },
+        {
+          "kind": "concurrent_run"
+        }
+      ],
+      "expected": {
+        "task_status": "COMPLETED",
+        "balance_minor": 120000,
+        "verified_success": true
+      }
+    },
+    {
+      "case_ref": "transfer-no-approval",
+      "request": {
+        "client_request_ref": "transfer-no-approval",
+        "user_request": "虚构数据回放：给小王转 300 元，至少保留 1000 元。",
+        "steps": [
+          {
+            "step_ref": "transfer",
+            "action": "transfer.create",
+            "arguments": {
+              "source_account_ref": "account-demo-001",
+              "recipient_ref": "recipient-demo-wang",
+              "amount_minor": 30000,
+              "currency": "CNY",
+              "fee_minor": 0,
+              "minimum_remaining_balance_minor": 100000
+            }
+          }
+        ]
+      },
+      "events": [
+        {
+          "kind": "run"
+        }
+      ],
+      "expected": {
+        "task_status": "WAITING_APPROVAL",
+        "balance_minor": 150000,
+        "verified_success": false
+      }
+    },
+    {
+      "case_ref": "transfer-response-lost",
+      "request": {
+        "client_request_ref": "transfer-response-lost",
+        "user_request": "虚构数据回放：给小王转 300 元，至少保留 1000 元。",
+        "steps": [
+          {
+            "step_ref": "transfer",
+            "action": "transfer.create",
+            "arguments": {
+              "source_account_ref": "account-demo-001",
+              "recipient_ref": "recipient-demo-wang",
+              "amount_minor": 30000,
+              "currency": "CNY",
+              "fee_minor": 0,
+              "minimum_remaining_balance_minor": 100000
+            }
+          }
+        ]
+      },
+      "events": [
+        {
+          "kind": "approve"
+        },
+        {
+          "kind": "fault",
+          "step_ref": "transfer",
+          "fault": "response_lost"
+        },
+        {
+          "kind": "run"
+        },
+        {
+          "kind": "recover"
+        }
+      ],
+      "expected": {
+        "task_status": "COMPLETED",
+        "balance_minor": 120000,
+        "verified_success": true
+      }
+    },
+    {
+      "case_ref": "transfer-crash-before",
+      "request": {
+        "client_request_ref": "transfer-crash-before",
+        "user_request": "虚构数据回放：给小王转 300 元，至少保留 1000 元。",
+        "steps": [
+          {
+            "step_ref": "transfer",
+            "action": "transfer.create",
+            "arguments": {
+              "source_account_ref": "account-demo-001",
+              "recipient_ref": "recipient-demo-wang",
+              "amount_minor": 30000,
+              "currency": "CNY",
+              "fee_minor": 0,
+              "minimum_remaining_balance_minor": 100000
+            }
+          }
+        ]
+      },
+      "events": [
+        {
+          "kind": "approve"
+        },
+        {
+          "kind": "fault",
+          "step_ref": "transfer",
+          "fault": "crash_before_bank"
+        },
+        {
+          "kind": "run"
+        },
+        {
+          "kind": "recover"
+        }
+      ],
+      "expected": {
+        "task_status": "TERMINATED",
+        "balance_minor": 150000,
+        "verified_success": false
+      }
+    },
+    {
+      "case_ref": "redemption-before-transfer",
+      "request": {
+        "client_request_ref": "redemption-before-transfer",
+        "user_request": "虚构数据回放：给小王转 300 元，至少保留 1000 元。",
+        "steps": [
+          {
+            "step_ref": "redeem",
+            "action": "product.redeem",
+            "arguments": {
+              "account_ref": "account-demo-001",
+              "product_ref": "fund-demo",
+              "amount_minor": 10000,
+              "fee_minor": 0,
+              "minimum_remaining_balance_minor": 0
+            }
+          },
+          {
+            "step_ref": "transfer",
+            "action": "transfer.create",
+            "arguments": {
+              "source_account_ref": "account-demo-001",
+              "recipient_ref": "recipient-demo-wang",
+              "amount_minor": 30000,
+              "currency": "CNY",
+              "fee_minor": 0,
+              "minimum_remaining_balance_minor": 100000
+            },
+            "depends_on": [
+              "redeem"
+            ],
+            "funds_available_after": [
+              "redeem"
+            ]
+          }
+        ]
+      },
+      "events": [
+        {
+          "kind": "approve"
+        },
+        {
+          "kind": "run"
+        },
+        {
+          "kind": "settle"
+        },
+        {
+          "kind": "recover"
+        }
+      ],
+      "expected": {
+        "task_status": "COMPLETED",
+        "balance_minor": 130000,
+        "verified_success": true
+      }
+    }
+  ]
+}

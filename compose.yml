@@ -1,0 +1,42 @@
+services:
+  database:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: finguard
+      POSTGRES_DB: finguard
+      POSTGRES_PASSWORD: ${FINGUARD_POSTGRES_PASSWORD:?Set a random hexadecimal password in .env}
+    volumes:
+      - database-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finguard -d finguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  backend:
+    build: .
+    environment:
+      FINGUARD_DATABASE_URL: postgresql://finguard:${FINGUARD_POSTGRES_PASSWORD}@database:5432/finguard
+      FINGUARD_DATABASE_SCHEMA: finguard
+      FINGUARD_WORKER_ENABLED: "true"
+      FINGUARD_EVALUATION_ENABLED: ${FINGUARD_EVALUATION_ENABLED:-false}
+      FINGUARD_CORS_ORIGINS: ${FINGUARD_CORS_ORIGINS:-[]}
+      FINGUARD_CALLBACK_SECRET: ${FINGUARD_CALLBACK_SECRET:-}
+      FINGUARD_MODEL_URL: ${FINGUARD_MODEL_URL:-}
+      FINGUARD_MODEL_API_KEY: ${FINGUARD_MODEL_API_KEY:-}
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - backend-artifacts:/app/artifacts
+    depends_on:
+      database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready',timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      retries: 5
+    restart: unless-stopped
+volumes:
+  database-data:
+  backend-artifacts:

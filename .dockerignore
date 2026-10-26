@@ -1,0 +1,15 @@
+.git
+.venv
+.env
+.env.*
+artifacts
+runtime
+logs
+dist
+build
+tests
+.pytest_cache
+.ruff_cache
+**/__pycache__
+**/*.pyc
+**/*.local.*
