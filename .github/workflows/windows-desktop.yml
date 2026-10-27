@@ -32,9 +32,11 @@ jobs:
       - name: Verify frozen application and restart persistence
         shell: pwsh
         run: |
-          $fgTestData = Join-Path $env:RUNNER_TEMP 'finguard-desktop-qa'
+          $fgTestData = Join-Path $env:RUNNER_TEMP 'finguard-desktop-中文数据'
+          $fgPortable = Join-Path $env:RUNNER_TEMP 'finguard-中文路径'
+          Expand-Archive -LiteralPath 'dist/FinGuard-0.3.0-windows-x64.zip' -DestinationPath $fgPortable
           $fgReport = Join-Path $PWD 'artifacts/desktop-qa-report.json'
-          $fgProcess = Start-Process -FilePath (Join-Path $PWD 'dist/FinGuard/FinGuard.exe') -ArgumentList @('--self-test', '--data-dir', ('"' + $fgTestData + '"'), '--report', ('"' + $fgReport + '"')) -WindowStyle Hidden -Wait -PassThru
+          $fgProcess = Start-Process -FilePath (Join-Path $fgPortable 'FinGuard/FinGuard.exe') -ArgumentList @('--self-test', '--data-dir', ('"' + $fgTestData + '"'), '--report', ('"' + $fgReport + '"')) -WindowStyle Hidden -Wait -PassThru
           if ($fgProcess.ExitCode -ne 0) { throw 'Frozen desktop self-test failed' }
           $fgResult = Get-Content -LiteralPath $fgReport -Raw | ConvertFrom-Json
           if ($fgResult.status -ne 'passed') { throw 'Desktop report did not confirm success' }

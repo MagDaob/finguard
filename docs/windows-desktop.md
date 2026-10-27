@@ -9,7 +9,7 @@ FinGuard 0.3.0 提供 Windows x64 便携软件。解压后双击 `FinGuard.exe`�
 3. 点击“进入本机工作台”，无需手动复制访问令牌。
 4. 关闭窗口后等待“安全退出”完成。重新启动后可继续查询已有任务。
 
-支持 Windows 10、Windows 11 的 x64 环境。窗口使用 [Microsoft Edge WebView2 Runtime](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution)；本机没有该运行环境时，需从微软官方渠道安装。当前便携包未做代码签名，尚未在所有受支持系统和全新虚拟机上验证。
+目标环境为 Windows 10 1903 及之后版本、Windows 11 的 x64 环境。窗口使用 [Microsoft Edge WebView2 Runtime](https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution)；本机没有该运行环境时，需从微软官方渠道安装。当前便携包未做代码签名，尚未在所有目标系统和全新虚拟机上验证。
 
 默认使用确定性模拟规划器和虚构账户，不调用付费模型。包内没有开发机 `.env`、API key、演示令牌或业务数据库。桌面本机会话使用当前 Windows 用户拥有的模拟数据，不能替代正式身份登录。
 
@@ -54,6 +54,8 @@ uv run --locked python scripts/build-windows.py
 ```
 
 脚本使用 [packaging/windows/](../packaging/windows/) 中独立的 Python 3.12 环境和锁文件，保留项目开发环境。PyInstaller 按[官方冻结方式](https://pywebview.flowrl.com/guide/freezing)分别构建三个可执行文件。数据库二进制来自固定版本的 EDB 官方下载，执行 SHA-256 校验后才提取允许的运行文件；不复制开发机数据库。
+
+Windows PostgreSQL 工具在部分中文路径下存在启动编码问题。构建时为随包的未签名工具加入[微软支持的进程级 UTF-8 声明](https://learn.microsoft.com/windows/apps/design/globalizing/use-utf8-code-page)，保留原有权限清单。原下载档案保持不变，包内修改后的文件另行记录摘要。发现签名二进制时，构建停止；不覆盖签名资源。数据库继续使用 UTF-8，系统全局区域设置保持原配置。
 
 | 产物 | 用途 |
 |---|---|

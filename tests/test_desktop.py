@@ -87,3 +87,15 @@ def test_ready_response_cannot_impersonate_a_desktop_service(desktop, tmp_path, 
             runtime.wait_ready(runtime.api_port)
     finally:
         runtime.close()
+
+
+def test_utf8_manifest_preserves_existing_execution_permissions():
+    source = Path(__file__).resolve().parents[1] / "packaging/windows/postgres_utf8.py"
+    spec = importlib.util.spec_from_file_location("postgres_utf8_test", source)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    original = b'<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0"><trustInfo xmlns="urn:schemas-microsoft-com:asm.v3"><security><requestedPrivileges><requestedExecutionLevel level="asInvoker" uiAccess="false"/></requestedPrivileges></security></trustInfo></assembly>'
+    changed = module.utf8_manifest(original)
+    assert b'level="asInvoker"' in changed and b'uiAccess="false"' in changed
+    assert b"activeCodePage" in changed and b"UTF-8" in changed
+    assert module.utf8_manifest(changed).count(b"<activeCodePage") == 1

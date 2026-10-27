@@ -187,6 +187,11 @@ def assemble():
                     package.read(item)
                 )
     # 使用冻结环境的发行元数据收集第三方许可，避免读取开发配置。
+    run([PYTHON, ROOT / "packaging/windows/postgres_utf8.py", pg / "bin"])
+    (licenses / "PostgreSQL-PACKAGING-NOTICE.txt").write_text(
+        "PostgreSQL 18.6 Windows binaries from the verified EDB archive.\nThe unsigned executables in this distribution include a process-level UTF-8 activeCodePage application manifest for non-ASCII path compatibility. Existing execution permissions are preserved.\nThe upstream archive is unmodified; packaged file hashes are recorded in manifest.json.\nUpstream: https://www.enterprisedb.com/download-postgresql-binaries\n",
+        encoding="utf-8",
+    )
     run([PYTHON, ROOT / "packaging/windows/licenses.py", licenses])
     npm_packages = []
     lock = json.loads((ROOT / "frontend/package-lock.json").read_text(encoding="utf-8"))
