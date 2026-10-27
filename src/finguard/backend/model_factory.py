@@ -1,14 +1,14 @@
 """统一选择确定性规划、自定义网关或 DeepSeek 官方接口。"""
 
 from finguard.backend.config import Settings
-from finguard.backend.deepseek import DeepSeekClient, DeepSeekPlanner
+from finguard.backend.deepseek import AdaptiveDeepSeekPlanner, DeepSeekClient
 from finguard.backend.errors import require
 from finguard.backend.planning import GatewayPlanner
 
 
 def configured_planner(settings: Settings):
     if settings.model_provider == "deepseek":
-        return DeepSeekPlanner(DeepSeekClient(settings))
+        return AdaptiveDeepSeekPlanner(DeepSeekClient(settings))
     if settings.model_url:
         return GatewayPlanner(
             settings.model_url,

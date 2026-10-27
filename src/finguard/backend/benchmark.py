@@ -10,7 +10,12 @@ from pydantic import ValidationError
 
 from finguard.backend.catalog import ACTIONS, canonical
 from finguard.backend.database import Database
-from finguard.backend.deepseek import DeepSeekClient, DeepSeekPlanner, SubmitPlan
+from finguard.backend.deepseek import (
+    AdaptiveDeepSeekPlanner,
+    DeepSeekClient,
+    DeepSeekPlanner,
+    SubmitPlan,
+)
 from finguard.backend.errors import ServiceError
 from finguard.backend.evaluation import ReplayRunner, ReplaySuite
 from finguard.backend.planning import BaselinePlanner, compile_candidate
@@ -194,6 +199,30 @@ def run_live_benchmark(
     if progress:
         progress({"phase": "eager_baseline", "passed": report["eager_baseline"]["passed"]})
     report["agent_loop"] = ReplayRunner(database).run(suite, planner)
+    simple = (
+        not client.settings.deepseek_thinking
+        and client.settings.deepseek_planning_mode == "auto"
+        and all(
+            1 <= len(case.request.steps) <= 2
+            and not any(step.funds_available_after for step in case.request.steps)
+            for case in suite.cases
+        )
+    )
+    enough_budget = (
+        client.request_budget is None
+        or client.request_count + len(suite.cases) <= client.request_budget
+    )
+    if simple and enough_budget:
+        report["adaptive_small"] = ReplayRunner(database).run(
+            suite, AdaptiveDeepSeekPlanner(client)
+        )
+        if progress:
+            progress({"phase": "adaptive_small", "passed": report["adaptive_small"]["passed"]})
+    else:
+        report["adaptive_small"] = {
+            "status": "NOT_RUN",
+            "reason": "NOT_SIMPLE_SUITE_OR_REQUEST_BUDGET",
+        }
     report["agent_diagnostics"] = planner.diagnostics()
     report["requests_sent"] = client.request_count
     report["status"] = (
@@ -201,6 +230,7 @@ def run_live_benchmark(
         if all(stage["error_count"] == 0 for stage in report["throughput"])
         and report["agent_loop"]["passed"]
         and report["eager_baseline"]["passed"]
+        and report["adaptive_small"].get("passed", True)
         else "FAILED"
     )
     report["finished_at"] = datetime.now(UTC).isoformat()

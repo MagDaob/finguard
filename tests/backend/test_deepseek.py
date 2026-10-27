@@ -13,7 +13,7 @@ from finguard.backend.api import create_app
 from finguard.backend.benchmark import run_live_benchmark
 from finguard.backend.catalog import Constraints, Step, normalize_steps
 from finguard.backend.config import Settings
-from finguard.backend.deepseek import DeepSeekClient, DeepSeekPlanner
+from finguard.backend.deepseek import AdaptiveDeepSeekPlanner, DeepSeekClient, DeepSeekPlanner
 from finguard.backend.errors import ServiceError
 from finguard.backend.model_factory import configured_planner
 
@@ -251,14 +251,90 @@ def test_missing_key_fails_closed_and_env_alias_is_secret(tmp_path, monkeypatch)
         )
 
 
+def test_adaptive_simple_plan_uses_one_request_and_only_relevant_schemas():
+    seen = []
+    transport = echo_transport()
+
+    def handler(request):
+        data = json.loads(request.content)
+        seen.append(data)
+        assert set(json.loads(data["messages"][1]["content"])["tools"]) == {"accounts.balance"}
+        return transport.handle_request(request)
+
+    client = DeepSeekClient(settings(), httpx.MockTransport(handler))
+    try:
+        planner = AdaptiveDeepSeekPlanner(client)
+        assert planner.propose(goal(), Constraints())[0] == goal()
+        assert client.request_count == 1 and planner.diagnostics()["strategy"] == "direct-small"
+        assert isinstance(planner.with_prompt("review"), AdaptiveDeepSeekPlanner)
+    finally:
+        client.close()
+
+
+def test_adaptive_forced_loop_preserves_two_round_protocol():
+    client = DeepSeekClient(settings(deepseek_planning_mode="loop"), echo_transport())
+    try:
+        assert AdaptiveDeepSeekPlanner(client).propose(goal(), Constraints())[0] == goal()
+        assert client.request_count == 2
+    finally:
+        client.close()
+
+
+def test_adaptive_funds_condition_automatically_keeps_tool_loop():
+    steps = normalize_steps(
+        (
+            Step(
+                step_ref="redeem",
+                action="product.redeem",
+                arguments={
+                    "account_ref": "account-demo-001",
+                    "product_ref": "fund-demo",
+                    "amount_minor": 100,
+                    "fee_minor": 0,
+                    "minimum_remaining_balance_minor": 0,
+                },
+            ),
+            Step(
+                step_ref="balance",
+                action="accounts.balance",
+                arguments={"account_ref": "account-demo-001"},
+                depends_on=("redeem",),
+                funds_available_after=("redeem",),
+            ),
+        ),
+        Constraints(),
+    )
+    client = DeepSeekClient(settings(), echo_transport())
+    try:
+        assert AdaptiveDeepSeekPlanner(client).propose(steps, Constraints())[0] == steps
+        assert client.request_count == 2
+    finally:
+        client.close()
+
+
+def test_adaptive_candidate_still_cannot_change_business_parameters():
+    altered = copy.deepcopy(goal())
+    altered[0]["arguments"]["account_ref"] = "other-account"
+    client = DeepSeekClient(
+        settings(), httpx.MockTransport(lambda _: response(content=json.dumps({"steps": altered})))
+    )
+    try:
+        with pytest.raises(ServiceError) as error:
+            AdaptiveDeepSeekPlanner(client).propose(goal(), Constraints())
+        assert error.value.code == "PLAN_SCOPE_CHANGED" and client.request_count == 1
+    finally:
+        client.close()
+
+
 @pytest.mark.postgres
 def test_same_live_harness_runs_with_mock_provider_and_isolated_business(database, bank):
     client = DeepSeekClient(settings(), echo_transport(), request_budget=32)
     try:
         report = run_live_benchmark(database, client, Path("tests/scenarios/backend-replay.json"))
         assert report["status"] == "PASSED", report
-        assert report["requests_sent"] == 26
+        assert report["requests_sent"] == 29
         assert report["eager_baseline"]["passed"]
+        assert report["adaptive_small"]["passed"]
         assert report["agent_loop"]["case_count"] == 3
         assert all(len(c["planning"]["rounds"]) == 2 for c in report["agent_loop"]["cases"])
         assert bank.list_accounts("user-demo-001")[0]["balance_minor"] == 150000

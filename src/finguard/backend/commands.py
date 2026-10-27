@@ -67,6 +67,7 @@ def run_command(args) -> int:
                     "deepseek_concurrency": 4,
                     "deepseek_max_rounds": 4,
                     "deepseek_thinking": False,
+                    "deepseek_planning_mode": "auto",
                     "deepseek_max_tokens": min(settings.deepseek_max_tokens, 2048),
                 }
             )

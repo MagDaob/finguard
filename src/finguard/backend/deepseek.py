@@ -457,3 +457,75 @@ class DeepSeekPlanner(BaselinePlanner):
         except ServiceError as exc:
             report.update(status="FAILED", error_code=exc.code)
             raise
+
+
+class AdaptiveDeepSeekPlanner(DeepSeekPlanner):
+    """简单任务单次提交紧凑候选；复杂条件及思考模式沿用有界工具循环。"""
+
+    def with_prompt(self, prompt):
+        return AdaptiveDeepSeekPlanner(self.client, prompt, self._report)
+
+    def propose(self, goals: list[dict], constraints: Constraints) -> tuple[list[dict], str]:
+        if (
+            self.client.settings.deepseek_planning_mode == "loop"
+            or self.client.settings.deepseek_thinking
+            or len(goals) > 2
+            or any(step["funds_available_after"] for step in goals)
+        ):
+            return super().propose(goals, constraints)
+        report = {
+            "provider": "deepseek",
+            "strategy": "direct-small",
+            "rounds": [],
+            "tool_calls": [],
+            "status": "RUNNING",
+        }
+        self._report.set(report)
+        try:
+            actions = {step["action"] for step in goals}
+            response = self.client.complete(
+                [
+                    {
+                        "role": "system",
+                        "content": "Return JSON {steps:[...]} only. Preserve every supplied goal, action, exact arguments, dependencies and funds conditions. Never authorize or execute anything. "
+                        + (self.prompt or ""),
+                    },
+                    {
+                        "role": "user",
+                        "content": canonical(
+                            {
+                                "goals": goals,
+                                "constraints": constraints.model_dump(mode="json"),
+                                "tools": {
+                                    name: ACTIONS[name].arguments.model_json_schema()
+                                    for name in sorted(actions)
+                                },
+                            }
+                        ),
+                    },
+                ],
+                json_output=True,
+                deadline=time.monotonic() + self.client.settings.deepseek_loop_seconds,
+            )
+            report["rounds"].append(
+                {
+                    "round": 1,
+                    "model": response.model,
+                    "latency_ms": response.latency_ms,
+                    "usage": response.usage,
+                }
+            )
+            try:
+                plan = SubmitPlan.model_validate_json(response.message.get("content") or "")
+            except ValidationError as exc:
+                raise ServiceError(
+                    "MODEL_INVALID_RESPONSE", "模型未返回有效的完整候选。", 502
+                ) from exc
+            candidate = compile_candidate(
+                goals, [s.model_dump(mode="json") for s in plan.steps], constraints
+            )
+            report["status"] = "VALIDATED"
+            return candidate, "deepseek-adaptive-v1:" + self.client.settings.deepseek_model
+        except ServiceError as exc:
+            report.update(status="FAILED", error_code=exc.code)
+            raise
