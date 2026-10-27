@@ -8,6 +8,8 @@ FinGuard 是一个面向金融任务的工作台与可恢复后端。它把用�
 
 已提供 Windows x64 便携桌面版。构建后解压完整软件目录，双击 `FinGuard.exe`，即可自动启动独立窗口和本机模拟服务。使用、数据位置和构建方法见[桌面说明](docs/windows-desktop.md)，实际结果见[桌面验收](docs/windows-desktop-validation.md)。
 
+也可从 [Windows desktop 构建工作流](https://github.com/MagDaob/finguard/actions/workflows/windows-desktop.yml)下载最近通过的运行产物。云端产物保留 14 天，源码与构建入口持续保存在仓库。
+
 项目本体位于 `src/finguard/`，模拟银行位于独立的 `services/bank-simulator/`。两边分开运行环境、配置、进程、数据库和账号，通过认证 HTTP 接口通信，见[服务隔离说明](docs/service-isolation.md)。
 
 银行、模型和插件的接口准备层已实现，包含标准类型、受信注册入口、模式目录和本地校验 API。它们不激活新连接，也不执行第三方插件，见[扩展接口说明](docs/extension-interfaces.md)。
