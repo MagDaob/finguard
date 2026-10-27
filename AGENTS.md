@@ -8,7 +8,7 @@
 
 ## 仓库同步
 
-本项目对应私有仓库 [MagDaob/finguard](https://github.com/MagDaob/finguard)。用户已授权在后续开发中持续更新该仓库。
+本项目对应公开仓库 [MagDaob/finguard](https://github.com/MagDaob/finguard)。用户已授权在后续开发中持续更新该仓库。
 
 - 每完成一个可验证的改动，检查文件范围与验证结果，再提交并同步到仓库。
 - 提交前检查远端分支和最新提交，保留已有内容及用户无关改动。

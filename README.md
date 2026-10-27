@@ -4,7 +4,7 @@ FinGuard 是一个面向金融任务的可恢复后端。它把用户目标转�
 
 **当前版本：0.3.0，模拟业务后端。** 已实现转账、账单、理财申赎、临时锁卡、订阅取消和条件组合任务。接口、持久化执行、授权、后台恢复、轨迹、回放和策略发布流程均可运行。现已加入 DeepSeek 官方 API、自适应简单任务规划和有界工具循环，见 [Agent 设计](docs/deepseek-design.md)。全部业务使用虚构数据；小规模真实调用及 Agent 对照已通过，结果见 [DeepSeek 验收](docs/deepseek-validation.md)。真实银行接入和前端工作台属于后续范围。
 
-项目位于私有仓库 [MagDaob/finguard](https://github.com/MagDaob/finguard)。后续开发按可验证的改动持续同步。
+项目位于公开仓库 [MagDaob/finguard](https://github.com/MagDaob/finguard)。后续开发按可验证的改动持续同步。
 
 项目本体位于 `src/finguard/`，模拟银行位于独立的 `services/bank-simulator/`。两边分开运行环境、配置、进程、数据库和账号，通过认证 HTTP 接口通信，见[服务隔离说明](docs/service-isolation.md)。
 
