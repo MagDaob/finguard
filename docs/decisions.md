@@ -54,6 +54,12 @@
 
 构建产物可由后端在本机同源提供，容器使用独立 Nginx 代理。模拟银行保持独立目录、运行环境和服务边界。使用与实际验证见[前端入口](../frontend/README.md)及[验收记录](frontend-validation.md)。
 
+## Windows 桌面决策
+
+桌面外壳采用 pywebview 6.2.1 和系统 WebView2。使用独立 Python 3.12 构建环境、PyInstaller 6.22.3 和锁文件，分别冻结外壳、后端和模拟银行。首版交付完整便携目录及压缩包，避免单文件每次解压数据库程序带来的启动成本。具体版本以 [Windows 锁文件](../packaging/windows/uv.lock)为准。
+
+数据库随程序提供二进制，数据保存在当前用户目录，项目与模拟银行仍使用不同数据库账号。Windows DPAPI 保护本机凭据，Job Object 回收自有后代进程。该桌面会话是本机模拟入口，不替代正式身份系统。边界与验证见[桌面说明](windows-desktop.md)。
+
 ## DeepSeek 接入决策
 
 0.3.0 按用户要求增加 DeepSeek 官方接口，直接使用现有 HTTPX，不新增 SDK 依赖。默认模型按当日官方文档配置为 `deepseek-flash`，支持可选思考模式和用量诊断。按需工具循环、全量对照及请求预算见 [设计说明](deepseek-design.md)。真实性能和任务效果以 [专项验收](deepseek-validation.md)为准。

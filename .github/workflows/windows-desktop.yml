@@ -1,0 +1,50 @@
+name: Windows desktop
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'packaging/windows/**'
+      - 'scripts/build-windows.py'
+      - '.github/workflows/windows-desktop.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          version: "0.11.14"
+          python-version: "3.12"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24.12.0"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Build isolated Windows executables
+        run: uv run --locked python scripts/build-windows.py
+      - name: Verify frozen application and restart persistence
+        shell: pwsh
+        run: |
+          $fgTestData = Join-Path $env:RUNNER_TEMP 'finguard-desktop-qa'
+          $fgReport = Join-Path $PWD 'artifacts/desktop-qa-report.json'
+          $fgProcess = Start-Process -FilePath (Join-Path $PWD 'dist/FinGuard/FinGuard.exe') -ArgumentList @('--self-test', '--data-dir', ('"' + $fgTestData + '"'), '--report', ('"' + $fgReport + '"')) -WindowStyle Hidden -Wait -PassThru
+          if ($fgProcess.ExitCode -ne 0) { throw 'Frozen desktop self-test failed' }
+          $fgResult = Get-Content -LiteralPath $fgReport -Raw | ConvertFrom-Json
+          if ($fgResult.status -ne 'passed') { throw 'Desktop report did not confirm success' }
+          $fgResult | ConvertTo-Json -Depth 4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: FinGuard-windows-x64
+          path: |
+            dist/FinGuard-0.3.0-windows-x64.zip
+            dist/FinGuard-0.3.0-windows-x64.zip.sha256
+            artifacts/desktop-qa-report.json
+          if-no-files-found: error
+          retention-days: 14

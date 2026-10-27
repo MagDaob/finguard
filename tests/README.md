@@ -12,6 +12,8 @@
 
 前端在 `frontend/` 中执行 `npm ci`、`npm run format:check`、`npm test` 和 `npm run build`。组件检查覆盖金额精度、会话隔离、授权冲突、重复点击、未知状态和创建请求恢复；浏览器联调范围见[前端验收](../docs/frontend-validation.md)。新增的 [backend/test_web.py](backend/test_web.py) 检查可选静态页面、深链接及 API 和文件边界。
 
+Windows 桌面边界检查位于 [test_desktop.py](test_desktop.py)，非 Windows 平台明确跳过。实际冻结后的 EXE 另做独立模拟转账、重复请求、重启持久化和退出清理检查，运行方法见[桌面说明](../docs/windows-desktop.md)。该检查不调用付费模型。
+
 在项目根目录安装开发依赖，配置可创建命名空间的 PostgreSQL 测试数据库，然后运行：
 
 ```powershell
@@ -63,6 +65,8 @@ Windows 可使用[本机 PostgreSQL 脚本](../scripts/local-postgres.ps1)。未
 [checks.yml](../.github/workflows/checks.yml)在 Windows、Linux 和 Python 3.12 至 3.14 上检查无数据库部分；Linux 的 Python 3.12、3.14 使用 PostgreSQL 18 检查后端。前端在 Windows、Linux 上使用 Node.js 24.12.0 检查格式、测试和构建。容器任务构建三个服务并检查页面深链接与代理。CI 数据库是隔离的临时实例，仅用于虚构数据。
 
 本地与远端结果分别核实。配置存在不代表执行成功，提交对应结果见 GitHub Actions。
+
+[windows-desktop.yml](../.github/workflows/windows-desktop.yml)在 Windows 上构建三个独立 EXE，取得校验过的数据库二进制，并运行实际桌面 EXE 自检。通过后上传完整便携包、SHA-256 和脱敏的自检结果，保留 14 天；不上传用户数据目录、配置或日志。
 
 ## DeepSeek 专项
 

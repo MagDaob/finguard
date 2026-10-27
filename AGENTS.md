@@ -41,3 +41,5 @@
 当前已采用 Python、uv、Pydantic、pytest、Ruff、PostgreSQL、Psycopg、FastAPI、Uvicorn 和 HTTPX。版本与范围见项目清单、锁文件及设计决策。模型支持可替换网关和 DeepSeek 官方接口，真实效果与界面继续单独验收。不要把候选框架写成已采用方案。
 
 前端位于 `frontend/`，采用 React、TypeScript、Vite、React Router、TanStack Query、Zod 与无损 JSON 解析。变更前端时执行相关组件检查及生产构建，保持内存会话、授权复检、整数金额和证据边界。联调优先使用 `scripts/frontend-qa.py` 的隔离模拟服务，避免修改演示数据或意外调用付费模型。
+
+Windows 桌面构建位于 `packaging/windows/`，与开发环境分开。桌面、后端和模拟银行分别冻结，数据保存在用户目录，不把开发 `.env`、密钥、令牌或数据库放入包。交付前运行独立数据目录下的实际 EXE 自检，保持各服务凭据隔离和退出清理。

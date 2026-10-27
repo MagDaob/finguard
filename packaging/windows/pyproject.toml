@@ -1,0 +1,24 @@
+[project]
+name = "finguard-desktop-build"
+version = "0.3.0"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "finguard==0.3.0",
+    "finguard-bank-simulator==0.3.0",
+    "finguard-bank-contracts==0.3.0",
+    "finguard-plugin-contracts==0.3.0",
+    "pywebview==6.2.1",
+    "pyinstaller==6.22.3",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = []
+
+[tool.uv.sources]
+finguard = { path = "../..", editable = true }
+finguard-bank-simulator = { path = "../../services/bank-simulator", editable = true }
+finguard-bank-contracts = { path = "../../packages/bank-contracts", editable = true }
+finguard-plugin-contracts = { path = "../../packages/plugin-contracts", editable = true }
