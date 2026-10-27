@@ -1,10 +1,11 @@
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
+from finguard_simulator.bank import SimulatedBank
+from finguard_simulator.testing import seed_combined_demo as seed_demo
 
-from finguard.backend.bank import ResultUnknown, SimulatedBank
+from finguard.backend.bank import ResultUnknown
 from finguard.backend.catalog import operation_digest
-from finguard.backend.demo import seed_demo
 from finguard.backend.errors import ServiceError
 from finguard.backend.security import Security
 

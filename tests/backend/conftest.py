@@ -3,12 +3,12 @@ from uuid import uuid4
 
 import psycopg
 import pytest
+from finguard_simulator.bank import SimulatedBank
+from finguard_simulator.testing import seed_combined_demo as seed_demo
 from psycopg import sql
 
-from finguard.backend.bank import SimulatedBank
 from finguard.backend.config import Settings
 from finguard.backend.database import Database
-from finguard.backend.demo import seed_demo
 from finguard.backend.security import Security
 from finguard.backend.service import Backend
 
@@ -58,4 +58,4 @@ def transfer_args():
 
 @pytest.fixture
 def backend(database, bank):
-    return Backend(database)
+    return Backend(database, bank=bank)

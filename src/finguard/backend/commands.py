@@ -26,7 +26,7 @@ def register_commands(commands) -> None:
     user.add_argument("--risk-level", type=int, choices=range(6), default=1)
     user.add_argument("--admin", action="store_true")
     user.add_argument("--output", type=Path, required=True)
-    serve = commands.add_parser("serve", help="运行模拟业务后端")
+    serve = commands.add_parser("serve", help="运行 FinGuard 项目后端")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
     worker = commands.add_parser("worker", help="核实未完成提交并恢复已请求的任务")
@@ -62,6 +62,9 @@ def run_command(args) -> int:
             from finguard.backend.deepseek import DeepSeekClient
 
             require(args.live, "LIVE_FLAG_REQUIRED", "真实测试需要显式提供 --live。", 422)
+            from finguard.backend.evaluation import _implementation
+
+            _implementation()
             settings = settings.model_copy(
                 update={
                     "deepseek_concurrency": 4,
@@ -144,7 +147,9 @@ def run_command(args) -> int:
 
             uvicorn.run(create_app(settings), host=args.host, port=args.port)
         elif args.command == "worker":
-            backend = Backend(db)
+            from finguard.backend.bank import HttpBank
+
+            backend = Backend(db, bank=HttpBank.configured(settings))
             while True:
                 print(json.dumps(backend.recover()))
                 if args.once:

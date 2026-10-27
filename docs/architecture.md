@@ -85,11 +85,15 @@ flowchart TD
 | `backend/catalog.py`、`backend/planning.py` | 工具模式、目标归一化、有限解析、候选计划和编译 |
 | `backend/service.py` | 计划版本、调度、提交意图、停止、核实及任务汇总 |
 | `backend/security.py`、`backend/authorization.py` | 主体权限、单次授权、委托消费与失败释放 |
-| `backend/bank.py` | 独立业务事务、模拟账本、幂等结果、延迟结算和证据 |
+| `backend/bank.py` | 银行协议与 HTTP 客户端，不访问银行数据库 |
+| `services/bank-simulator/` | 独立模拟业务事务、账本、幂等结果、延迟结算、证据和测试回放 |
+| `packages/bank-contracts/` | 双方共享的类型、参数模式、摘要与错误契约 |
 | `backend/database.py`、`backend/migrations/` | PostgreSQL 命名空间、迁移和任务锁 |
 | `backend/evaluation.py`、`backend/policies.py` | 隔离回放、系统不变量、失败归因和提示词发布 |
 
 任务会话锁覆盖一次调度及外部调用，应用事务不跨银行调用持有。停止请求使用行锁取消未提交操作；已经提交的操作继续核实。多个恢复进程共享同一操作身份，不能重新生成同义付款。
+
+项目与模拟银行分开配置、Python 运行环境、进程、数据库及账号，所有在线银行读写均通过认证 HTTP 接口。本机数据库可以共用 PostgreSQL 实例，账号不能连接对方数据库；Compose 进一步使用独立数据库容器和数据卷。部署与迁移见[服务隔离](service-isolation.md)。
 
 模拟银行采用稳定操作编号、参数摘要和唯一流水约束。查询可以为不存在的操作写入失败栅栏，从而阻止迟到提交。真实下游不一定支持此能力，不能仅因查询未找到就判定付款失败。
 

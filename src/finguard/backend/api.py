@@ -16,6 +16,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import Field, ValidationError
 
 from finguard import __version__
+from finguard.backend.bank import HttpBank
 from finguard.backend.catalog import (
     ApprovalRequest,
     DelegationRequest,
@@ -92,13 +93,15 @@ class PolicyRelease(RequestModel):
     reviewed: Annotated[bool, Field(strict=True)]
 
 
-def create_app(settings: Settings | None = None, planner=None) -> FastAPI:
+def create_app(settings: Settings | None = None, planner=None, *, bank=None) -> FastAPI:
     settings = settings or Settings.from_env()
     database = Database(settings.database_url.get_secret_value(), settings.database_schema)
     if planner is None:
         planner = configured_planner(settings)
     gateway = planner if isinstance(planner, (GatewayPlanner, DeepSeekPlanner)) else None
-    backend = Backend(database, PolicyPlanner(database, gateway) if gateway else planner)
+    owns_bank = bank is None
+    bank = bank or HttpBank.configured(settings)
+    backend = Backend(database, PolicyPlanner(database, gateway) if gateway else planner, bank=bank)
     policies = Policies(database, gateway)
 
     async def recover_loop(app):
@@ -128,6 +131,8 @@ def create_app(settings: Settings | None = None, planner=None) -> FastAPI:
                     await worker
             if gateway and hasattr(gateway, "close"):
                 gateway.close()
+            if owns_bank:
+                bank.close()
 
     app = FastAPI(
         title="FinGuard simulated financial backend", version=__version__, lifespan=lifespan
@@ -193,6 +198,8 @@ def create_app(settings: Settings | None = None, planner=None) -> FastAPI:
     def ready():
         with database.transaction() as c:
             c.execute("SELECT 1 FROM schema_migrations LIMIT 1").fetchone()
+        if hasattr(bank, "ready"):
+            bank.ready()
         require(
             not getattr(app.state, "worker_error", None),
             "WORKER_UNAVAILABLE",
@@ -279,12 +286,7 @@ def create_app(settings: Settings | None = None, planner=None) -> FastAPI:
     ):
         backend.security.require_scope(actor, "accounts.read")
         backend.security.require_scope(actor, "transactions.read")
-        with database.transaction() as c:
-            backend.bank._account(c, actor.subject_ref, account_ref)
-            return c.execute(
-                "SELECT entry_ref,operation_ref,amount_minor,category,refund_of,occurred_at FROM bank_ledger WHERE account_ref=%s AND (%s::text IS NULL OR entry_ref<%s) ORDER BY entry_ref DESC LIMIT %s",
-                (account_ref, before, before, limit),
-            ).fetchall()
+        return backend.bank.list_ledger(actor.subject_ref, account_ref, limit, before)
 
     @app.get("/v1/delegations", tags=["authorization"])
     def delegations(

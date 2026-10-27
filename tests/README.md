@@ -2,6 +2,8 @@
 
 当前覆盖领域规则、模拟银行、持久化授权与执行、HTTP 接口、计划控制、回放和策略发布。全部业务输入为虚构数据。实际执行记录见[后端验收](../docs/backend-validation.md)。
 
+模拟器通过开发依赖显式安装。普通回归使用随机同库夹具；双进程恢复测试使用分开的随机命名空间，通过认证 HTTP 通信。新增检查覆盖服务密钥、参数校验、超时不重提和旧账本归档，见[服务隔离](../docs/service-isolation.md)。
+
 ## 执行方式
 
 在项目根目录安装开发依赖，配置可创建命名空间的 PostgreSQL 测试数据库，然后运行：
@@ -13,7 +15,7 @@ uv run --locked pytest -q
 uv run --locked ruff check .
 uv run --locked ruff format --check .
 uv run --locked finguard replay --suite tests/scenarios/backend-replay.json
-uv build --no-sources
+uv build --all --no-sources
 ```
 
 Windows 可使用[本机 PostgreSQL 脚本](../scripts/local-postgres.ps1)。未配置数据库时默认跳过标记为 `postgres` 的测试；强制模式将缺少配置视为失败。已配置但连接失败不会被静默跳过。

@@ -14,7 +14,7 @@
 
 | 方法与路径 | 内容 | 所需权限 |
 |---|---|---|
-| `GET /health/live`、`GET /health/ready` | 存活、数据库和恢复循环状态 | 无 |
+| `GET /health/live`、`GET /health/ready` | 存活、项目数据库、独立银行服务和恢复循环状态 | 无 |
 | `GET /v1/me` | 当前主体与权限 | 有效令牌 |
 | `POST /v1/tokens/revoke-current` | 撤销当前令牌 | 有效令牌 |
 | `GET /v1/accounts`、`GET /v1/recipients` | 本人账户和确认收款人 | `accounts.read` |

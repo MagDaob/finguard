@@ -1,11 +1,2 @@
-class ServiceError(Exception):
-    def __init__(self, code: str, message: str, status: int = 400):
-        super().__init__(message)
-        self.code = code
-        self.message = message
-        self.status = status
-
-
-def require(condition: bool, code: str, message: str, status: int = 400) -> None:
-    if not condition:
-        raise ServiceError(code, message, status)
+from finguard_bank_contracts.errors import ServiceError as ServiceError
+from finguard_bank_contracts.errors import require as require

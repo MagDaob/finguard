@@ -12,6 +12,9 @@ class Settings(BaseModel):
     model_config = ConfigDict(extra="forbid")
     database_url: SecretStr
     database_schema: str = Field(default="finguard", pattern=r"^[a-z][a-z0-9_]{0,62}$")
+    bank_url: str = "http://127.0.0.1:8001"
+    bank_api_key: SecretStr | None = None
+    bank_timeout_seconds: float = Field(default=10, ge=1, le=60)
     worker_enabled: bool = True
     worker_interval_seconds: float = Field(default=1, ge=0.1, le=60)
     callback_secret: SecretStr | None = None

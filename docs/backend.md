@@ -2,6 +2,8 @@
 
 适用版本：0.3.0。当前服务使用虚构主体和模拟银行，数据保存在 PostgreSQL。接口默认监听 `127.0.0.1:8000`。
 
+模拟银行已拆至独立目录、环境、进程和数据库，默认监听 `127.0.0.1:8001`。首次启动和旧库迁移见[服务隔离说明](service-isolation.md)。
+
 ## 配置和身份
 
 配置从当前工作目录的 `.env` 读取，同名环境变量优先。[配置示例](../.env.example)不包含可用凭据。访问令牌只在数据库中保存 SHA-256 摘要，明文只写入指定本地文件。
@@ -10,6 +12,9 @@
 |---|---|
 | `FINGUARD_DATABASE_URL` | 必填 PostgreSQL 连接地址 |
 | `FINGUARD_DATABASE_SCHEMA` | 业务命名空间，默认 `finguard` |
+| `FINGUARD_BANK_URL` | 独立银行服务地址，默认 `http://127.0.0.1:8001` |
+| `FINGUARD_BANK_API_KEY` | 必填服务密钥，与模拟器的 `SIMBANK_API_KEY` 一致 |
+| `FINGUARD_BANK_TIMEOUT_SECONDS` | 银行请求超时，默认 10 秒；提交不自动重试 |
 | `FINGUARD_WORKER_ENABLED` | 服务内置恢复循环，默认 `true` |
 | `FINGUARD_WORKER_INTERVAL_SECONDS` | 核实间隔，默认 1 秒，允许 0.1 秒至 60 秒 |
 | `FINGUARD_CALLBACK_SECRET` | 银行回调 HMAC 密钥；未配置时回调关闭 |
@@ -34,7 +39,7 @@
 
 端口首次自动选择，保存在 `artifacts/postgresql/port.local`；密码保存在同目录的 `password.local`。首次生成的 `.env` 使用该端口。该目录包含本机秘密和数据库文件，已整体忽略。
 
-需要停止数据库时，先停止后端，再执行：
+需要停止数据库时，先执行 `.\scripts\local-services.ps1 stop` 停止两个服务，再执行：
 
 ```powershell
 .\scripts\local-postgres.ps1 stop
@@ -44,16 +49,17 @@
 
 ## 容器部署
 
-需要 Docker Engine 和 Compose。以下命令在项目根目录运行，`.env` 中必须设置随机的十六进制 `FINGUARD_POSTGRES_PASSWORD`。可以用 `uv run python -c "import secrets; print(secrets.token_hex(32))"` 在本机生成，再写入 `.env`；不要提交该值。
+需要 Docker Engine 和 Compose。以下命令在项目根目录运行，`.env` 中必须设置三个独立随机值：`FINGUARD_POSTGRES_PASSWORD`、`SIMBANK_POSTGRES_PASSWORD` 和 `FINGUARD_BANK_API_KEY`。服务密钥至少 32 个字符。可以用 `uv run python -c "import secrets; print(secrets.token_hex(32))"` 分别生成，再写入本机配置；不要提交这些值。
 
 ```powershell
 docker compose up -d --build
+docker compose exec bank-simulator /app/.venv/bin/finguard-bank-simulator seed-demo
 docker compose exec backend uv run --locked --no-sync finguard seed-demo
 New-Item -ItemType Directory -Force artifacts | Out-Null
 docker compose cp backend:/app/artifacts/demo-tokens.local.json artifacts/demo-tokens.local.json
 ```
 
-数据库不发布主机端口，后端仅发布本机端口 8000。容器以普通用户运行，命名卷保存数据库和令牌文件。后端启动时自动执行尚未应用的迁移；已有版本的迁移不重复执行。
+两个数据库分别运行，均不发布主机端口。项目和模拟服务分别发布本机端口 8000 和 8001，容器以普通系统用户运行。项目容器只接收项目数据库凭据、模型配置及服务密钥，模拟容器只接收自己的数据库凭据和服务密钥。数据库和令牌文件使用独立命名卷；双方启动时分别迁移自己的结构。
 
 ```powershell
 docker compose logs --tail 100 backend
@@ -68,7 +74,7 @@ docker compose stop
 
 恢复先查询原操作。模拟银行支持对不存在的操作写入失败栅栏，阻断迟到提交；这项能力不能直接假定真实银行也提供。已提交任务即使收到停止请求或原令牌失效，仍继续核实；新业务步骤需要有效执行身份。
 
-备份使用 PostgreSQL 的 `pg_dump`，恢复使用 `pg_restore`，同时备份本机配置和访问密钥。通过数据库工具的受保护凭据文件或交互提示提供密码。恢复环境应与线上环境隔离，先核对账本及未完成操作，再开放调度。
+两个数据库分别使用 PostgreSQL 的 `pg_dump` 备份、`pg_restore` 恢复，同时备份本机配置和访问密钥。恢复时须保持任务操作编号与银行记录关联。通过数据库工具的受保护凭据文件或交互提示提供密码。恢复环境应与线上环境隔离，先核对账本及未完成操作，再开放调度。
 
 ## 模型接入
 
@@ -98,6 +104,8 @@ DeepSeek 官方接口使用 `FINGUARD_MODEL_PROVIDER=deepseek`，配置及工具
 当前自然语言理解使用有限的确定性解析器，网关参与结构化目标的候选编排。更广泛的模型意图理解需要单独设计确认边界和评估集。自定义协议与控制规则已通过模拟 HTTP 验证；真实 DeepSeek 调用状态见 [专项验收](deepseek-validation.md)。
 
 ## 回放与优化
+
+本节需要开发依赖中的模拟包。生产运行环境仅安装项目本体，调用离线入口会明确返回 `REPLAY_DEPENDENCY_MISSING`；HTTP 评估入口默认关闭。测试实现位于模拟器目录，不通过在线银行服务开放故障注入。
 
 ```powershell
 uv run --locked finguard replay --suite tests/scenarios/backend-replay.json

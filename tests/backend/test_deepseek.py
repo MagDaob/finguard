@@ -351,7 +351,7 @@ def test_http_uses_deepseek_loop_but_still_waits_for_business_approval(
         database_url=database.dsn, database_schema=database.schema, worker_enabled=False
     )
     provider = DeepSeekClient(config, echo_transport())
-    with TestClient(create_app(config, DeepSeekPlanner(provider))) as http:
+    with TestClient(create_app(config, DeepSeekPlanner(provider), bank=bank)) as http:
         http.headers["Authorization"] = "Bearer " + backend.security.issue_token(actor.subject_ref)
         result = http.post(
             "/v1/tasks",

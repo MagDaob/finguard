@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "finguard-bank-simulator"
+version = "0.3.0"
+description = "Isolated fictional bank service for FinGuard development"
+requires-python = ">=3.12,<3.15"
+dependencies = ["finguard-bank-contracts==0.3.0", "fastapi>=0.120,<1", "psycopg[binary]>=3.2,<4", "uvicorn>=0.38,<1"]
+
+[project.scripts]
+finguard-bank-simulator = "finguard_simulator.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/finguard_simulator"]
+
+[tool.uv.sources]
+finguard-bank-contracts = { workspace = true }

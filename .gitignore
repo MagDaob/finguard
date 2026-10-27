@@ -15,6 +15,9 @@
 /tmp/
 /dist/
 /build/
+**/artifacts/
+**/dist/
+**/build/
 /coverage/
 *.log
 

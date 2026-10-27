@@ -18,6 +18,8 @@ services:
     environment:
       FINGUARD_DATABASE_URL: postgresql://finguard:${FINGUARD_POSTGRES_PASSWORD}@database:5432/finguard
       FINGUARD_DATABASE_SCHEMA: finguard
+      FINGUARD_BANK_URL: http://bank-simulator:8001
+      FINGUARD_BANK_API_KEY: ${FINGUARD_BANK_API_KEY:?Set a random service key of at least 32 characters}
       FINGUARD_WORKER_ENABLED: "true"
       FINGUARD_EVALUATION_ENABLED: ${FINGUARD_EVALUATION_ENABLED:-false}
       FINGUARD_CORS_ORIGINS: ${FINGUARD_CORS_ORIGINS:-[]}
@@ -36,8 +38,43 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      bank-simulator:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "/app/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready',timeout=5)"]
+      interval: 10s
+      timeout: 6s
+      retries: 5
+    restart: unless-stopped
+  simulator-database:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: simbank
+      POSTGRES_DB: simbank
+      POSTGRES_PASSWORD: ${SIMBANK_POSTGRES_PASSWORD:?Set a separate random hexadecimal simulator database password}
+    volumes:
+      - simulator-database-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U simbank -d simbank"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  bank-simulator:
+    build:
+      context: .
+      dockerfile: services/bank-simulator/Dockerfile
+    environment:
+      SIMBANK_DATABASE_URL: postgresql://simbank:${SIMBANK_POSTGRES_PASSWORD}@simulator-database:5432/simbank
+      SIMBANK_DATABASE_SCHEMA: simbank
+      SIMBANK_API_KEY: ${FINGUARD_BANK_API_KEY}
+    ports:
+      - "127.0.0.1:8001:8001"
+    depends_on:
+      simulator-database:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "/app/.venv/bin/python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health/ready',timeout=5)"]
       interval: 10s
       timeout: 6s
       retries: 5
@@ -45,3 +82,4 @@ services:
 volumes:
   database-data:
   backend-artifacts:
+  simulator-database-data:

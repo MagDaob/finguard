@@ -9,7 +9,7 @@ import psycopg
 from psycopg.types.json import Jsonb
 
 from finguard.backend import authorization
-from finguard.backend.bank import NotSubmitted, ResultUnknown, SimulatedBank, WorkerCrash
+from finguard.backend.bank import Bank, HttpBank, NotSubmitted, ResultUnknown, WorkerCrash
 from finguard.backend.catalog import (
     ACTIONS,
     ApprovalRequest,
@@ -40,10 +40,14 @@ from finguard.domain.values import new_ref
 
 
 class Backend:
-    def __init__(self, database: Database, planner=None):
+    def __init__(self, database: Database, planner=None, *, bank: Bank | None = None):
         self.db = database
         self.security = Security(database)
-        self.bank = SimulatedBank(database)
+        if bank is None:
+            from finguard.backend.config import Settings
+
+            bank = HttpBank.configured(Settings.from_env())
+        self.bank = bank
         self.planner = planner or BaselinePlanner()
 
     @staticmethod
@@ -331,6 +335,15 @@ class Backend:
 
     def approve(self, actor: Actor, operation_ref: str, request: ApprovalRequest) -> dict:
         with self.db.transaction() as c:
+            candidate = self._operation(c, actor.subject_ref, operation_ref)
+        self.security.require_scope(actor, "approvals.write")
+        for scope in required_scopes(candidate["action"]):
+            self.security.require_scope(actor, scope)
+        require(
+            request.expected_digest == candidate["digest"], "STALE_PREVIEW", "操作内容已变化。", 409
+        )
+        preview = self.bank.preview(actor.subject_ref, candidate["action"], candidate["arguments"])
+        with self.db.transaction() as c:
             operation = self._operation(c, actor.subject_ref, operation_ref, True)
             self.security.require_scope(actor, "approvals.write", c)
             for scope in required_scopes(operation["action"]):
@@ -355,9 +368,6 @@ class Backend:
                 "STALE_PREVIEW",
                 "操作内容已变化，请重新查看预览。",
                 409,
-            )
-            preview = self.bank.preview(
-                actor.subject_ref, operation["action"], operation["arguments"]
             )
             existing = c.execute(
                 "SELECT approval_ref,expires_at FROM approvals WHERE operation_ref=%s AND status='ACTIVE' AND expires_at>now() FOR UPDATE",
@@ -628,6 +638,17 @@ class Backend:
 
     def _claim(self, actor: Actor, operation_ref: str) -> dict | None:
         with self.db.transaction() as c:
+            candidate = self._operation(c, actor.subject_ref, operation_ref)
+        for scope in required_scopes(candidate["action"]):
+            self.security.require_scope(actor, scope)
+        preview_error = None
+        try:
+            self.bank.preview(actor.subject_ref, candidate["action"], candidate["arguments"])
+        except ServiceError as exc:
+            if exc.status >= 500:
+                return None
+            preview_error = exc
+        with self.db.transaction() as c:
             # 与停止操作保持一致的锁顺序：任务行先于操作行。
             row = self._operation(c, actor.subject_ref, operation_ref)
             task = self._task(c, actor.subject_ref, row["task_ref"], True)
@@ -641,10 +662,8 @@ class Backend:
             definition = ACTIONS[operation["action"]]
             for scope in required_scopes(operation["action"]):
                 self.security.require_scope(actor, scope, c)
-            try:
-                self.bank.preview(actor.subject_ref, operation["action"], operation["arguments"])
-            except ServiceError as exc:
-                self._op_state(c, operation, O.FAILED, error=exc.code)
+            if preview_error:
+                self._op_state(c, operation, O.FAILED, error=preview_error.code)
                 return None
             if definition.write:
                 if operation["status"] == O.PREPARING.value:

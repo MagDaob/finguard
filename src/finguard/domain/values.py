@@ -1,24 +1,30 @@
 """不可变的基础值；首批仅支持人民币整数分。"""
 
-from typing import Annotated, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, TypeAdapter
+from finguard_bank_contracts.values import (
+    Currency as Currency,
+)
+from finguard_bank_contracts.values import (
+    DomainModel as DomainModel,
+)
+from finguard_bank_contracts.values import (
+    Minor as Minor,
+)
+from finguard_bank_contracts.values import (
+    PositiveMinor as PositiveMinor,
+)
+from finguard_bank_contracts.values import (
+    Reference as Reference,
+)
+from finguard_bank_contracts.values import (
+    RequestText as RequestText,
+)
+from pydantic import TypeAdapter
 
 from finguard.domain.errors import AccessDenied
 
-Reference = Annotated[str, StringConstraints(pattern=r"^[a-zA-Z][a-zA-Z0-9_.:-]{0,127}$")]
-RequestText = Annotated[str, StringConstraints(min_length=1, max_length=10000, pattern=r"\S")]
-Minor = Annotated[int, Field(strict=True, ge=0, le=2**63 - 1)]
-PositiveMinor = Annotated[int, Field(strict=True, gt=0, le=2**63 - 1)]
-Currency = Literal["CNY"]
 _REFERENCE = TypeAdapter(Reference)
-
-
-class DomainModel(BaseModel):
-    model_config = ConfigDict(
-        strict=True, frozen=True, extra="forbid", revalidate_instances="always"
-    )
 
 
 class Money(DomainModel):

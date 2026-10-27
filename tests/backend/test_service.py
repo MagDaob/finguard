@@ -76,7 +76,7 @@ def test_uncertain_response_is_not_reported_as_success_until_reconciled(
     backend.bank.inject_fault(task["operations"][0]["operation_ref"], mode)
     result = backend.run(actor, task["task_ref"])
     assert not result["verified_success"] and result["operations"][0]["status"] == "UNKNOWN"
-    Backend(database).recover()
+    Backend(database, bank=backend.bank).recover()
     result = backend.get_task(actor, task["task_ref"])
     assert result["verified_success"]
     assert backend.bank.list_accounts(actor.subject_ref)[0]["balance_minor"] == 120000
@@ -94,7 +94,7 @@ def test_process_loss_recovers_using_persisted_operation_identity(
     backend.bank.inject_fault(task["operations"][0]["operation_ref"], mode)
     with pytest.raises(WorkerCrash):
         backend.run(actor, task["task_ref"])
-    Backend(database).recover()
+    Backend(database, bank=backend.bank).recover()
     assert backend.get_task(actor, task["task_ref"])["operations"][0]["status"] == expected_status
     assert backend.bank.list_accounts(actor.subject_ref)[0]["balance_minor"] == expected_balance
 

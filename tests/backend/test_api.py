@@ -15,7 +15,7 @@ def client(database, bank):
         worker_enabled=False,
         callback_secret="test-only-secret",
     )
-    with TestClient(create_app(settings)) as client:
+    with TestClient(create_app(settings, bank=bank)) as client:
         backend = client.app.state.backend
         token = backend.security.issue_token("user-demo-001")
         client.headers["Authorization"] = f"Bearer {token}"
@@ -27,6 +27,17 @@ def test_health_identity_and_documented_api(client):
     assert client.get("/v1/me").json()["subject_ref"] == "user-demo-001"
     assert "/v1/tasks" in client.get("/openapi.json").json()["paths"]
     assert client.get("/v1/accounts").json()[0]["balance_minor"] == 150000
+
+
+def test_bank_unavailable_fails_readiness_but_keeps_liveness(client, monkeypatch):
+    from finguard.backend.errors import ServiceError
+
+    def unavailable():
+        raise ServiceError("BANK_UNAVAILABLE", "银行服务暂时不可用。", 503)
+
+    monkeypatch.setattr(client.app.state.backend.bank, "ready", unavailable, raising=False)
+    assert client.get("/health/live").status_code == 200
+    assert client.get("/health/ready").status_code == 503
 
 
 def test_http_transfer_full_lifecycle(client):

@@ -5,6 +5,8 @@ ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_CACHE_DIR=/tmp/uv-cache PYTHONUNB
 WORKDIR /app
 COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
+COPY packages/bank-contracts ./packages/bank-contracts
+COPY services/bank-simulator/pyproject.toml ./services/bank-simulator/pyproject.toml
 RUN uv sync --locked --no-dev && uv cache clean \
     && useradd --uid 10001 --create-home finguard \
     && mkdir -p /app/artifacts /tmp/uv-cache \

@@ -6,6 +6,8 @@ FinGuard 是一个面向金融任务的可恢复后端。它把用户目标转�
 
 项目位于私有仓库 [MagDaob/finguard](https://github.com/MagDaob/finguard)。后续开发按可验证的改动持续同步。
 
+项目本体位于 `src/finguard/`，模拟银行位于独立的 `services/bank-simulator/`。两边分开运行环境、配置、进程、数据库和账号，通过认证 HTTP 接口通信，见[服务隔离说明](docs/service-isolation.md)。
+
 ## 设计与能力
 
 系统显式关联任务、计划、授权、操作和证据。模型只能提出候选计划，确定性程序负责权限、参数、依赖、限额和业务规则。
@@ -48,16 +50,18 @@ Windows 本机 PostgreSQL：
 
 ```powershell
 .\scripts\local-postgres.ps1 start -Download
-uv run --locked finguard migrate
+.\scripts\local-services.ps1 stop
+uv run --locked python scripts/isolate-local.py
+.\scripts\sync-services.ps1
 uv run --locked finguard seed-demo
 ```
 
 首次运行会下载经过 SHA-256 校验的 PostgreSQL 18.6 二进制包，建立隔离数据目录和随机密码。数据、端口和日志位于忽略的 `artifacts/postgresql/`。脚本仅监听本机地址，已有 `.env` 保留。使用自行安装的数据库时，按 [.env.example](.env.example) 配置 `.env`，跳过下载脚本。
 
-启动接口和内置恢复任务：
+启动独立模拟银行、项目接口和内置恢复任务：
 
 ```powershell
-uv run --locked finguard serve
+.\scripts\local-services.ps1 start
 ```
 
 打开 [API 文档](http://127.0.0.1:8000/docs)；[就绪检查](http://127.0.0.1:8000/health/ready)应返回 `ready`。演示访问令牌保存在本地 `artifacts/demo-tokens.local.json`，有效期为 24 小时。到期后执行 `seed-demo --rotate`；旧令牌如未撤销，会按原期限到期。
@@ -85,7 +89,7 @@ uv run --locked ruff check .
 uv run --locked ruff format --check .
 uv run --locked pytest -q
 uv run --locked finguard replay --suite tests/scenarios/backend-replay.json
-uv build --no-sources
+uv build --all --no-sources
 ```
 
 数据库测试使用随机命名空间，结束后仅清理本次命名空间。未配置数据库时，相关测试会跳过；设置 `FINGUARD_REQUIRE_POSTGRES=1` 可要求数据库检查必须执行。纯单元测试使用 `pytest -m "not postgres"`。
@@ -98,7 +102,9 @@ uv build --no-sources
 
 | 路径 | 内容 |
 |---|---|
-| [src/finguard/backend/](src/finguard/backend/) | 服务接口、存储、模拟银行、执行控制、规划与评估 |
+| [src/finguard/backend/](src/finguard/backend/) | 项目接口、存储、执行控制、规划、银行客户端与评估入口 |
+| [services/bank-simulator/](services/bank-simulator/) | 独立模拟银行、账本、业务数据、故障与离线回放 |
+| [packages/bank-contracts/](packages/bank-contracts/) | 双方共享的参数、摘要与错误契约 |
 | [src/finguard/domain/](src/finguard/domain/) | 金额、引用、核心对象及状态迁移守卫 |
 | [src/README.md](src/README.md) | 源码职责索引 |
 | [docs/architecture.md](docs/architecture.md) | 数据流、事务和信任边界 |
