@@ -153,6 +153,7 @@ class ReplayRunner:
         checks = {"execution_completed_without_error": False}
         error = None
         trace = []
+        planning = None
         try:
             db.migrate()
             seed_demo(db)
@@ -241,6 +242,8 @@ class ReplayRunner:
         except Exception:
             error = "REPLAY_FAILED"
         finally:
+            if planner and hasattr(planner, "diagnostics"):
+                planning = planner.diagnostics()
             # 仅清理本次随机创建的回放命名空间。
             require(schema.startswith("fg_replay_"), "UNSAFE_REPLAY_SCHEMA", "回放清理目标无效。")
             with psycopg.connect(db.dsn) as c:
@@ -249,8 +252,10 @@ class ReplayRunner:
                 )
         attribution = None
         if error or actual != case.expected.model_dump(mode="json") or not all(checks.values()):
-            if error and error.startswith("MODEL"):
+            if error and error.startswith(("MODEL", "DEEPSEEK")):
                 attribution = "MODEL_GATEWAY"
+            elif error and error.startswith("AGENT"):
+                attribution = "AGENT_LOOP"
             elif error in {
                 "GOAL_COVERAGE",
                 "PLAN_SCOPE_CHANGED",
@@ -274,5 +279,6 @@ class ReplayRunner:
             "error_code": error,
             "failure_layer": attribution,
             "trace": trace,
+            "planning": planning,
             "duration_ms": round((time.perf_counter() - started) * 1000),
         }

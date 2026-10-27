@@ -12,14 +12,15 @@ from finguard.domain.values import new_ref
 
 
 def clone_gateway(gateway: GatewayPlanner, prompt: str | None) -> GatewayPlanner:
-    return GatewayPlanner(
-        gateway.url, gateway.api_key, gateway.allow_local_http, prompt, transport=gateway.transport
-    )
+    return gateway.with_prompt(prompt)
 
 
 class PolicyPlanner(BaselinePlanner):
     def __init__(self, database: Database, gateway: GatewayPlanner):
         self.db, self.gateway = database, gateway
+
+    def diagnostics(self):
+        return self.gateway.diagnostics() if hasattr(self.gateway, "diagnostics") else None
 
     def propose(self, goals, constraints):
         with self.db.transaction() as c:

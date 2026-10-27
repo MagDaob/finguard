@@ -147,6 +147,9 @@ class Backend:
             self.bank.preview(actor.subject_ref, step["action"], step["arguments"])
 
     def _install(self, c, task: dict, steps: list[dict], planner_version: str) -> None:
+        diagnostics = self.planner.diagnostics() if hasattr(self.planner, "diagnostics") else None
+        if diagnostics:
+            self._event(c, task["task_ref"], "model_planning", diagnostics)
         version = task["current_version"] + 1
         compiled = []
         for step in steps:

@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
@@ -18,6 +19,16 @@ class Settings(BaseModel):
     model_api_key: SecretStr | None = None
     model_name: str | None = None
     model_allow_local_http: bool = False
+    model_provider: Literal["deterministic", "gateway", "deepseek"] = "deterministic"
+    deepseek_api_key: SecretStr | None = None
+    deepseek_model: Literal["deepseek-flash", "deepseek-v4-pro"] = "deepseek-flash"
+    deepseek_thinking: bool = False
+    deepseek_reasoning_effort: Literal["low", "high", "max"] = "low"
+    deepseek_max_tokens: int = Field(default=2048, ge=128, le=8192)
+    deepseek_max_rounds: int = Field(default=4, ge=2, le=8)
+    deepseek_concurrency: int = Field(default=4, ge=1, le=16)
+    deepseek_timeout_seconds: float = Field(default=45, ge=5, le=180)
+    deepseek_loop_seconds: float = Field(default=120, ge=10, le=600)
     evaluation_enabled: bool = False
     cors_origins: tuple[str, ...] = ()
 
@@ -38,4 +49,8 @@ class Settings(BaseModel):
                 values[field] = os.environ.get(name, local.get(name))
                 if field == "cors_origins":
                     values[field] = json.loads(values[field])
+        if not values.get("deepseek_api_key"):
+            values["deepseek_api_key"] = (
+                os.environ.get("DEEPSEEK_API_KEY") or local.get("DEEPSEEK_API_KEY") or None
+            )
         return cls.model_validate(values)

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "finguard"
-version = "0.2.0"
+version = "0.3.0"
 description = "FinGuard simulated financial task backend with authorization and recovery"
 readme = "README.md"
 requires-python = ">=3.12,<3.15"
@@ -27,7 +27,7 @@ packages = ["src/finguard"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers"
+addopts = "-ra --strict-markers --tb=short"
 markers = ["postgres: requires a disposable PostgreSQL schema"]
 
 [tool.ruff]

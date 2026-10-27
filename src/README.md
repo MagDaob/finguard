@@ -1,6 +1,6 @@
 # 源码组织
 
-项目使用 `finguard` Python 包，版本为 0.2.0。后端运行、配置与管理入口见[运行说明](../docs/backend.md)。
+项目使用 `finguard` Python 包，版本为 0.3.0。后端运行、配置与管理入口见[运行说明](../docs/backend.md)。
 
 | 位置 | 职责 |
 |---|---|
@@ -18,3 +18,5 @@
 | [finguard/scenarios.py](finguard/scenarios.py)、[cli.py](finguard/cli.py) | 原有场景草案校验和统一命令入口 |
 
 `domain/models.py` 保留首个单转账切片的绑定模型。多业务请求与执行记录使用后端契约，状态迁移继续复用领域守卫。真实服务适配与前端继续作为独立阶段。
+
+DeepSeek 官方接口与工具循环位于 [deepseek.py](finguard/backend/deepseek.py)，统一选择入口为 [model_factory.py](finguard/backend/model_factory.py)。真实吞吐及 Agent 对照测试位于 [benchmark.py](finguard/backend/benchmark.py)，按 [专项协议](../docs/deepseek-design.md)显式启动。

@@ -38,4 +38,4 @@
 
 实现阶段按 [tests/README.md](tests/README.md)选择相关检查。特别关注授权、幂等、并发、恢复和证据；只报告实际执行的验证。
 
-当前已采用 Python、uv、Pydantic、pytest、Ruff、PostgreSQL、Psycopg、FastAPI、Uvicorn 和 HTTPX。版本与范围见项目清单、锁文件及设计决策。模型使用可替换网关，真实效果与界面继续单独验收。不要把候选框架写成已采用方案。
+当前已采用 Python、uv、Pydantic、pytest、Ruff、PostgreSQL、Psycopg、FastAPI、Uvicorn 和 HTTPX。版本与范围见项目清单、锁文件及设计决策。模型支持可替换网关和 DeepSeek 官方接口，真实效果与界面继续单独验收。不要把候选框架写成已采用方案。

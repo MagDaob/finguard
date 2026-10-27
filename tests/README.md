@@ -55,3 +55,9 @@ Windows 可使用[本机 PostgreSQL 脚本](../scripts/local-postgres.ps1)。未
 [checks.yml](../.github/workflows/checks.yml)在 Windows、Linux 和 Python 3.12 至 3.14 上检查无数据库部分；Linux 的 Python 3.12、3.14 使用 PostgreSQL 18 检查后端，并单独构建容器。CI 数据库是隔离的临时实例，仅用于虚构数据。
 
 本地与远端结果分别核实。配置存在不代表执行成功，提交对应结果见 GitHub Actions。
+
+## DeepSeek 专项
+
+[backend/test_deepseek.py](backend/test_deepseek.py)使用模拟 HTTP 响应检查官方协议、推理字段、候选修正、并发、循环预算和权限边界。普通测试不会调用真实模型，也不会读取本机真实密钥用于网络请求。
+
+真实测试单独执行 `uv run --locked finguard model-benchmark --live`，最多 32 次付费请求、并发最高 4。过程、指标及限制见 [Agent 设计](../docs/deepseek-design.md)，结果见 [专项验收](../docs/deepseek-validation.md)。

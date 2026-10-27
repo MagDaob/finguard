@@ -18,6 +18,8 @@ def server(database, worker):
         port = listener.getsockname()[1]
     env = {
         **os.environ,
+        "FINGUARD_MODEL_PROVIDER": "deterministic",
+        "FINGUARD_MODEL_URL": "",
         "FINGUARD_DATABASE_URL": database.dsn,
         "FINGUARD_DATABASE_SCHEMA": database.schema,
         "FINGUARD_WORKER_ENABLED": "true" if worker else "false",

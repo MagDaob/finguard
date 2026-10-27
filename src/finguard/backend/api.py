@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import Field, ValidationError
 
+from finguard import __version__
 from finguard.backend.catalog import (
     ApprovalRequest,
     DelegationRequest,
@@ -25,8 +26,10 @@ from finguard.backend.catalog import (
 )
 from finguard.backend.config import Settings
 from finguard.backend.database import Database
+from finguard.backend.deepseek import DeepSeekPlanner
 from finguard.backend.errors import ServiceError, require
 from finguard.backend.evaluation import ReplayRunner, ReplaySuite
+from finguard.backend.model_factory import configured_planner
 from finguard.backend.planning import GatewayPlanner
 from finguard.backend.policies import Policies, PolicyPlanner
 from finguard.backend.security import Actor
@@ -92,13 +95,9 @@ class PolicyRelease(RequestModel):
 def create_app(settings: Settings | None = None, planner=None) -> FastAPI:
     settings = settings or Settings.from_env()
     database = Database(settings.database_url.get_secret_value(), settings.database_schema)
-    if planner is None and settings.model_url:
-        planner = GatewayPlanner(
-            settings.model_url,
-            settings.model_api_key.get_secret_value() if settings.model_api_key else None,
-            settings.model_allow_local_http,
-        )
-    gateway = planner if isinstance(planner, GatewayPlanner) else None
+    if planner is None:
+        planner = configured_planner(settings)
+    gateway = planner if isinstance(planner, (GatewayPlanner, DeepSeekPlanner)) else None
     backend = Backend(database, PolicyPlanner(database, gateway) if gateway else planner)
     policies = Policies(database, gateway)
 
@@ -127,8 +126,12 @@ def create_app(settings: Settings | None = None, planner=None) -> FastAPI:
                 worker.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
                     await worker
+            if gateway and hasattr(gateway, "close"):
+                gateway.close()
 
-    app = FastAPI(title="FinGuard simulated financial backend", version="0.2.0", lifespan=lifespan)
+    app = FastAPI(
+        title="FinGuard simulated financial backend", version=__version__, lifespan=lifespan
+    )
     app.add_middleware(BodyLimitMiddleware)
     if settings.cors_origins:
         app.add_middleware(
@@ -428,7 +431,11 @@ def create_app(settings: Settings | None = None, planner=None) -> FastAPI:
                 "format_version": "1",
                 "task": task,
                 "trace": trace,
-                "planner_mode": "gateway" if settings.model_url else "deterministic",
+                "planner_mode": "deepseek"
+                if isinstance(gateway, DeepSeekPlanner)
+                else "gateway"
+                if gateway
+                else "deterministic",
                 "contains_credentials": False,
             }
         )

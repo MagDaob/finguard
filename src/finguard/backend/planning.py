@@ -232,6 +232,9 @@ class GatewayPlanner(BaselinePlanner):
         self.url, self.api_key, self.prompt = url, api_key, prompt
         self.allow_local_http, self.transport = allow_local_http, transport
 
+    def with_prompt(self, prompt):
+        return GatewayPlanner(self.url, self.api_key, self.allow_local_http, prompt, self.transport)
+
     def propose(self, goals: list[dict], constraints: Constraints) -> tuple[list[dict], str]:
         headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
         payload = {

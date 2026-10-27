@@ -35,6 +35,14 @@ def register_commands(commands) -> None:
     replay.add_argument("--suite", type=Path, required=True)
     replay.add_argument("--output", type=Path, default=Path("artifacts/replay-report.json"))
     replay.add_argument("--model", action="store_true", help="使用已配置模型网关重新规划")
+    bench = commands.add_parser(
+        "model-benchmark", help="测试 DeepSeek 官方 API 吞吐和隔离 Agent 循环"
+    )
+    bench.add_argument(
+        "--live", action="store_true", help="显式启用付费网络请求；最多 32 次，并发最高 4"
+    )
+    bench.add_argument("--suite", type=Path, default=Path("tests/scenarios/backend-replay.json"))
+    bench.add_argument("--output", type=Path, default=Path("artifacts/deepseek-live-report.json"))
 
 
 def _write_private(path: Path, payload: dict) -> None:
@@ -49,7 +57,41 @@ def run_command(args) -> int:
         db = Database(settings.database_url.get_secret_value(), settings.database_schema)
         db.migrate()
         security = Security(db)
-        if args.command == "migrate":
+        if args.command == "model-benchmark":
+            from finguard.backend.benchmark import run_live_benchmark
+            from finguard.backend.deepseek import DeepSeekClient
+
+            require(args.live, "LIVE_FLAG_REQUIRED", "真实测试需要显式提供 --live。", 422)
+            settings = settings.model_copy(
+                update={
+                    "deepseek_concurrency": 4,
+                    "deepseek_max_rounds": 4,
+                    "deepseek_thinking": False,
+                    "deepseek_max_tokens": min(settings.deepseek_max_tokens, 2048),
+                }
+            )
+            client = DeepSeekClient(settings, request_budget=32)
+            try:
+                report = run_live_benchmark(
+                    db,
+                    client,
+                    args.suite,
+                    progress=lambda data: print(json.dumps({"progress": data}), flush=True),
+                )
+                _write_private(args.output, report)
+                print(
+                    json.dumps(
+                        {
+                            "status": report["status"],
+                            "requests_sent": report["requests_sent"],
+                            "report_file": str(args.output),
+                        }
+                    )
+                )
+                return 0 if report["status"] == "PASSED" else 1
+            finally:
+                client.close()
+        elif args.command == "migrate":
             print(json.dumps({"status": "MIGRATED", "schema": db.schema}))
         elif args.command == "seed-demo":
             seed_demo(db)
@@ -109,22 +151,14 @@ def run_command(args) -> int:
                 time.sleep(settings.worker_interval_seconds)
         elif args.command == "replay":
             from finguard.backend.evaluation import ReplayRunner, ReplaySuite
-            from finguard.backend.planning import GatewayPlanner
+            from finguard.backend.model_factory import configured_planner
             from finguard.backend.policies import PolicyPlanner
 
             planner = None
             if args.model:
-                require(bool(settings.model_url), "MODEL_NOT_CONFIGURED", "尚未配置模型网关。", 503)
-                planner = PolicyPlanner(
-                    db,
-                    GatewayPlanner(
-                        settings.model_url,
-                        settings.model_api_key.get_secret_value()
-                        if settings.model_api_key
-                        else None,
-                        settings.model_allow_local_http,
-                    ),
-                )
+                gateway = configured_planner(settings)
+                require(gateway is not None, "MODEL_NOT_CONFIGURED", "尚未配置模型。", 503)
+                planner = PolicyPlanner(db, gateway)
             suite = ReplaySuite.model_validate_json(args.suite.read_text(encoding="utf-8"))
             report = ReplayRunner(db).run(suite, planner)
             _write_private(args.output, report)
