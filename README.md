@@ -111,6 +111,7 @@ uv build --all --no-sources
 | [docs/domain-model.md](docs/domain-model.md) | 核心对象、状态和持久化关联 |
 | [docs/decisions.md](docs/decisions.md) | 已采用的选型与代价 |
 | [docs/roadmap.md](docs/roadmap.md)、[docs/implementation-plan.md](docs/implementation-plan.md) | 当前阶段与剩余工作 |
+| [docs/integration-platform-plan.md](docs/integration-platform-plan.md) | 国内个人银行、通用模型 API 和用户插件的下一阶段规划，待实施 |
 | [tests/backend/](tests/backend/) | PostgreSQL、并发、授权、恢复、HTTP 和优化流程测试 |
 | [docs/sources/project-framework.txt](docs/sources/project-framework.txt) | 用户提供的完整框架原文 |
 
