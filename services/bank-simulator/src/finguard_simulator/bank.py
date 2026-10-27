@@ -1,6 +1,6 @@
 """模拟银行拥有独立提交事务，并以稳定操作编号保存权威业务结果。"""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta, timezone
 from uuid import uuid4
 
 from finguard_bank_contracts.actions import ACTIONS, operation_digest
@@ -291,19 +291,30 @@ class SimulatedBank:
                 "funds_available": True,
             }
         if action == "bills.analyze":
+            if args.get("start_date"):
+                zone = timezone(timedelta(hours=8))
+                start = datetime.combine(date.fromisoformat(args["start_date"]), time.min, zone)
+                end = datetime.combine(date.fromisoformat(args["end_date"]), time.min, zone)
+                period = {k: args[k] for k in ("start_date", "end_date", "timezone")}
+            else:
+                end = datetime.now(UTC)
+                start = end - timedelta(days=args.get("days", 30))
+                period = {"days": args.get("days", 30)}
+            category = args.get("category")
             rows = c.execute(
-                "SELECT amount_minor,category FROM bank_ledger WHERE account_ref=%s AND occurred_at>=now() - make_interval(days => %s) AND (category LIKE 'spend:%%' OR category LIKE 'refund:%%')",
-                (args["account_ref"], args["days"]),
+                "SELECT amount_minor,category FROM bank_ledger WHERE account_ref=%s AND occurred_at>=%s AND occurred_at<%s AND (category LIKE 'spend:%%' OR category LIKE 'refund:%%') AND (%s::text IS NULL OR split_part(category, ':', 2)=%s)",
+                (args["account_ref"], start, end, category, category),
             ).fetchall()
             spending = sum(-row["amount_minor"] for row in rows if row["amount_minor"] < 0)
             refunds = sum(row["amount_minor"] for row in rows if row["amount_minor"] > 0)
             categories = {}
             for row in rows:
-                category = row["category"].split(":", 1)[1]
-                categories[category] = categories.get(category, 0) - row["amount_minor"]
+                label = row["category"].split(":", 1)[1]
+                categories[label] = categories.get(label, 0) - row["amount_minor"]
             return {
                 "account_ref": args["account_ref"],
-                "days": args["days"],
+                **period,
+                **({"category": category} if category else {}),
                 "spending_minor": spending,
                 "refunds_minor": refunds,
                 "net_spending_minor": spending - refunds,

@@ -95,6 +95,49 @@ def test_bill_analysis_excludes_transfers_and_accounts_for_refunds(bank, transfe
     assert report["net_spending_minor"] == 5000
 
 
+def test_calendar_bill_half_open_china_boundaries_and_category(bank, database):
+    from datetime import UTC, datetime
+
+    with database.transaction() as c:
+        c.execute("UPDATE bank_ledger SET occurred_at='2026-01-01T00:00:00Z'")
+        for index, when, amount, category in (
+            (1, datetime(2026, 8, 31, 15, 59, 59, tzinfo=UTC), -100, "spend:food"),
+            (2, datetime(2026, 8, 31, 16, 0, 0, tzinfo=UTC), -200, "spend:food"),
+            (3, datetime(2026, 9, 30, 15, 59, 59, tzinfo=UTC), 50, "refund:food"),
+            (4, datetime(2026, 9, 30, 16, 0, 0, tzinfo=UTC), -300, "spend:food"),
+            (5, datetime(2026, 9, 5, 0, 0, 0, tzinfo=UTC), -900, "spend:transport"),
+        ):
+            op = f"boundary-{index}"
+            c.execute(
+                "INSERT INTO bank_commands(operation_ref,subject_ref,action,arguments,digest,status,result) VALUES (%s,%s,'seed.history','{}','seed','SUCCEEDED','{}')",
+                (op, SUBJECT),
+            )
+            c.execute(
+                "INSERT INTO bank_ledger(entry_ref,operation_ref,account_ref,amount_minor,category,occurred_at) VALUES (%s,%s,'account-demo-001',%s,%s,%s)",
+                (f"entry-{index}", op, amount, category, when),
+            )
+    report = bank.execute(
+        SUBJECT,
+        "calendar-report",
+        "bills.analyze",
+        {
+            "account_ref": "account-demo-001",
+            "start_date": "2026-09-01",
+            "end_date": "2026-10-01",
+            "timezone": "Asia/Shanghai",
+            "category": "food",
+        },
+    )
+    assert report["spending_minor"] == 200 and report["refunds_minor"] == 50
+    assert report["net_spending_minor"] == 150 and report["categories"] == {"food": 150}
+    assert report["end_date"] == "2026-10-01" and "days" not in report
+    with database.transaction() as c:
+        fingerprint = c.execute(
+            "SELECT digest FROM bank_commands WHERE operation_ref='calendar-report'"
+        ).fetchone()["digest"]
+    assert bank.verify(SUBJECT, "calendar-report", fingerprint)[1]
+
+
 def test_product_acceptance_is_distinct_from_cash_availability(bank, database):
     args = {
         "account_ref": "account-demo-001",

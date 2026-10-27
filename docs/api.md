@@ -4,6 +4,8 @@
 
 模式目录和本地校验入口位于 `/v1/integrations/`，见[扩展接口](extension-interfaces.md)。这些入口不保存或激活连接、不发起外部请求，也不授予插件权限。
 
+任务支持可选 `context_task_ref`；账单支持明确日期区间和分类；预览新增 `authentication_policy`，高金额操作可能返回 `STEP_UP_REQUIRED`。导出将 `contains_credentials` 改为 `null` 并返回脱敏规则状态。字段、兼容性和示例见[自然语言与隐私说明](understanding-and-privacy.md)。
+
 ## 鉴权和数据约定
 
 除健康检查、接口文档和签名回调外，接口需要 `Authorization: Bearer <本地访问令牌>`。令牌来自可信本机管理命令；请求中的用户编号、`authorized` 字段或模型文本不会建立有效授权。

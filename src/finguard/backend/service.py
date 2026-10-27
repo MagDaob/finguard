@@ -25,6 +25,7 @@ from finguard.backend.catalog import (
 from finguard.backend.database import Database
 from finguard.backend.errors import ServiceError, require
 from finguard.backend.planning import BaselinePlanner, compile_candidate
+from finguard.backend.privacy import redact_text
 from finguard.backend.security import Actor, Security
 from finguard.domain.states import (
     OperationStatus as O,
@@ -40,7 +41,14 @@ from finguard.domain.values import new_ref
 
 
 class Backend:
-    def __init__(self, database: Database, planner=None, *, bank: Bank | None = None):
+    def __init__(
+        self,
+        database: Database,
+        planner=None,
+        *,
+        bank: Bank | None = None,
+        step_up_threshold_minor: int = 100000,
+    ):
         self.db = database
         self.security = Security(database)
         if bank is None:
@@ -49,6 +57,25 @@ class Backend:
             bank = HttpBank.configured(Settings.from_env())
         self.bank = bank
         self.planner = planner or BaselinePlanner()
+        require(
+            type(step_up_threshold_minor) is int and step_up_threshold_minor > 0,
+            "INVALID_AUTHENTICATION_POLICY",
+            "额外验证限额必须为正整数分。",
+            422,
+        )
+        self.step_up_threshold_minor = step_up_threshold_minor
+
+    def authentication_policy(self, action: str, arguments: dict) -> dict:
+        definition = ACTIONS[action]
+        amount = arguments.get("amount_minor", 0) + arguments.get("fee_minor", 0)
+        elevated = definition.monetary and amount > self.step_up_threshold_minor
+        return {
+            "level": "step_up" if elevated else "confirmation" if definition.write else "read",
+            "step_up_required": elevated,
+            "step_up_available": False,
+            "threshold_minor": self.step_up_threshold_minor,
+            "currency": "CNY",
+        }
 
     @staticmethod
     def _event(c, task: str, kind: str, data: dict) -> None:
@@ -222,10 +249,22 @@ class Backend:
                 409,
             )
             return self.get_task(actor, existing["task_ref"])
+        preferred = None
+        if request.context_task_ref:
+            previous = self.get_task(actor, request.context_task_ref)
+            previous_accounts = {
+                op["arguments"].get("source_account_ref", op["arguments"].get("account_ref"))
+                for op in previous["operations"]
+            } - {None}
+            if len(previous_accounts) == 1:
+                preferred = next(iter(previous_accounts))
         constraints, steps, questions = request.constraints, request.steps, []
         if not steps:
+            context = self._context(actor, request.user_request)
+            if preferred:
+                context["preferred_account_ref"] = preferred
             steps, constraints, questions = self.planner.infer(
-                request.user_request, self._context(actor, request.user_request), constraints
+                request.user_request, context, constraints
             )
         goals = normalize_steps(steps, constraints) if steps else []
         compiled, planner_version = [], "clarification-v1"
@@ -243,7 +282,7 @@ class Backend:
                     actor.subject_ref,
                     request.client_request_ref,
                     request_hash,
-                    request.user_request,
+                    redact_text(request.user_request),
                     Jsonb(goals),
                     Jsonb(constraints.model_dump(mode="json")),
                     Jsonb(questions),
@@ -262,6 +301,11 @@ class Backend:
                 )
                 reference = row["task_ref"]
             else:
+                if request.context_task_ref:
+                    c.execute(
+                        "UPDATE tasks SET context_task_ref=%s WHERE task_ref=%s",
+                        (request.context_task_ref, reference),
+                    )
                 self._event(
                     c, reference, "task_created", {"client_request_ref": request.client_request_ref}
                 )
@@ -308,6 +352,8 @@ class Backend:
                 "updated_at",
             )
         } | {
+            "user_request": redact_text(task["user_request"]),
+            "context_task_ref": task["context_task_ref"],
             "constraints": task["constraints"],
             "plans": plans,
             "operations": operations,
@@ -319,10 +365,11 @@ class Backend:
     def list_tasks(self, actor: Actor, limit: int = 50, before: str | None = None) -> list[dict]:
         self.security.require_scope(actor, "tasks.read")
         with self.db.transaction() as c:
-            return c.execute(
+            rows = c.execute(
                 "SELECT task_ref,user_request,status,current_version,stop_requested,created_at FROM tasks WHERE subject_ref=%s AND (%s::text IS NULL OR task_ref<%s) ORDER BY task_ref DESC LIMIT %s",
                 (actor.subject_ref, before, before, limit),
             ).fetchall()
+        return [{**row, "user_request": redact_text(row["user_request"])} for row in rows]
 
     def trace(self, actor: Actor, task_ref: str, after: int = 0, limit: int = 200) -> list[dict]:
         self.security.require_scope(actor, "tasks.read")
@@ -339,6 +386,14 @@ class Backend:
         self.security.require_scope(actor, "approvals.write")
         for scope in required_scopes(candidate["action"]):
             self.security.require_scope(actor, scope)
+        require(
+            not self.authentication_policy(candidate["action"], candidate["arguments"])[
+                "step_up_required"
+            ],
+            "STEP_UP_REQUIRED",
+            "该操作需要额外身份验证，当前版本尚未接入验证服务。",
+            403,
+        )
         require(
             request.expected_digest == candidate["digest"], "STALE_PREVIEW", "操作内容已变化。", 409
         )
@@ -641,6 +696,20 @@ class Backend:
             candidate = self._operation(c, actor.subject_ref, operation_ref)
         for scope in required_scopes(candidate["action"]):
             self.security.require_scope(actor, scope)
+        if self.authentication_policy(candidate["action"], candidate["arguments"])[
+            "step_up_required"
+        ]:
+            # 策略变更后，旧确认或委托也不能代替额外身份验证。
+            with self.db.transaction() as c:
+                self._task(c, actor.subject_ref, candidate["task_ref"], True)
+                row = self._operation(c, actor.subject_ref, operation_ref, True)
+                if row["status"] in {
+                    O.PREPARING.value,
+                    O.WAITING_APPROVAL.value,
+                    O.AUTHORIZED.value,
+                }:
+                    self._op_state(c, row, O.WAITING_APPROVAL, error="STEP_UP_REQUIRED")
+            return None
         preview_error = None
         try:
             self.bank.preview(actor.subject_ref, candidate["action"], candidate["arguments"])

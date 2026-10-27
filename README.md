@@ -10,6 +10,8 @@ FinGuard 是一个面向金融任务的可恢复后端。它把用户目标转�
 
 银行、模型和插件的接口准备层已实现，包含标准类型、受信注册入口、模式目录和本地校验 API。它们不激活新连接，也不执行第三方插件，见[扩展接口说明](docs/extension-interfaces.md)。
 
+自然语言入口已补充常见表达、中文金额、完整分句检查和自然月账单，支持显式关联前一任务查询最新余额。高金额操作需要额外验证；验证服务尚未接入时阻止执行。任务文字和导出应用有限脱敏规则，见[自然语言与隐私说明](docs/understanding-and-privacy.md)。
+
 ## 设计与能力
 
 系统显式关联任务、计划、授权、操作和证据。模型只能提出候选计划，确定性程序负责权限、参数、依赖、限额和业务规则。
@@ -115,6 +117,7 @@ uv build --all --no-sources
 | [docs/roadmap.md](docs/roadmap.md)、[docs/implementation-plan.md](docs/implementation-plan.md) | 当前阶段与剩余工作 |
 | [docs/integration-platform-plan.md](docs/integration-platform-plan.md) | 接口准备的范围与实施阶段 |
 | [docs/extension-interfaces.md](docs/extension-interfaces.md) | 已实现契约、本地校验 API 与开发说明 |
+| [docs/understanding-and-privacy.md](docs/understanding-and-privacy.md) | 输入完整性、账单区间、关联追问、分级验证与脱敏 |
 | [tests/backend/](tests/backend/) | PostgreSQL、并发、授权、恢复、HTTP 和优化流程测试 |
 | [docs/sources/project-framework.txt](docs/sources/project-framework.txt) | 用户提供的完整框架原文 |
 

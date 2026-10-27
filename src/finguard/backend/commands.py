@@ -149,7 +149,11 @@ def run_command(args) -> int:
         elif args.command == "worker":
             from finguard.backend.bank import HttpBank
 
-            backend = Backend(db, bank=HttpBank.configured(settings))
+            backend = Backend(
+                db,
+                bank=HttpBank.configured(settings),
+                step_up_threshold_minor=settings.step_up_threshold_minor,
+            )
             while True:
                 print(json.dumps(backend.recover()))
                 if args.once:

@@ -74,6 +74,7 @@ class TaskCreate(RequestModel):
     user_request: RequestText
     steps: Annotated[tuple[Step, ...], Field(max_length=32)] = ()
     constraints: Constraints = Field(default_factory=Constraints)
+    context_task_ref: Reference | None = Field(default=None, exclude_if=lambda v: v is None)
 
 
 class ReplanRequest(RequestModel):

@@ -33,6 +33,8 @@ from finguard.backend.evaluation import ReplayRunner, ReplaySuite
 from finguard.backend.model_factory import configured_planner
 from finguard.backend.planning import GatewayPlanner
 from finguard.backend.policies import Policies, PolicyPlanner
+from finguard.backend.privacy import POLICY as REDACTION_POLICY
+from finguard.backend.privacy import redact
 from finguard.backend.security import Actor
 from finguard.backend.service import Backend
 from finguard.domain.values import Reference
@@ -101,7 +103,12 @@ def create_app(settings: Settings | None = None, planner=None, *, bank=None) -> 
     gateway = planner if isinstance(planner, (GatewayPlanner, DeepSeekPlanner)) else None
     owns_bank = bank is None
     bank = bank or HttpBank.configured(settings)
-    backend = Backend(database, PolicyPlanner(database, gateway) if gateway else planner, bank=bank)
+    backend = Backend(
+        database,
+        PolicyPlanner(database, gateway) if gateway else planner,
+        bank=bank,
+        step_up_threshold_minor=settings.step_up_threshold_minor,
+    )
     policies = Policies(database, gateway)
 
     async def recover_loop(app):
@@ -365,6 +372,9 @@ def create_app(settings: Settings | None = None, planner=None, *, bank=None) -> 
         return {
             "operation_ref": operation_ref,
             "digest": operation["digest"],
+            "authentication_policy": backend.authentication_policy(
+                operation["action"], operation["arguments"]
+            ),
             "preview": backend.bank.preview(
                 actor.subject_ref, operation["action"], operation["arguments"]
             ),
@@ -433,17 +443,24 @@ def create_app(settings: Settings | None = None, planner=None, *, bank=None) -> 
         task = backend.get_task(actor, task_ref)
         trace = backend.trace(actor, task_ref, limit=1000)
         return jsonable_encoder(
-            {
-                "format_version": "1",
-                "task": task,
-                "trace": trace,
-                "planner_mode": "deepseek"
-                if isinstance(gateway, DeepSeekPlanner)
-                else "gateway"
-                if gateway
-                else "deterministic",
-                "contains_credentials": False,
-            }
+            redact(
+                {
+                    "format_version": "1",
+                    "task": task,
+                    "trace": trace,
+                    "planner_mode": "deepseek"
+                    if isinstance(gateway, DeepSeekPlanner)
+                    else "gateway"
+                    if gateway
+                    else "deterministic",
+                    "contains_credentials": None,
+                    "redaction": {
+                        "applied": True,
+                        "policy": REDACTION_POLICY,
+                        "complete_detection_guaranteed": False,
+                    },
+                }
+            )
         )
 
     def evaluation_access(actor: Actor):

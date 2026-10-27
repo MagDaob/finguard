@@ -17,6 +17,7 @@ class Settings(BaseModel):
     bank_environment: Literal["simulation", "external"] = "simulation"
     bank_api_key: SecretStr | None = None
     bank_timeout_seconds: float = Field(default=10, ge=1, le=60)
+    step_up_threshold_minor: int = Field(default=100000, ge=1, le=2**63 - 1)
     worker_enabled: bool = True
     worker_interval_seconds: float = Field(default=1, ge=0.1, le=60)
     callback_secret: SecretStr | None = None
