@@ -22,6 +22,7 @@
 | 前端格式与生产构建 | Prettier、TypeScript 和 Vite 检查通过 |
 | 后端全量回归 | 317 项通过，包含新增的 2 项页面挂载检查 |
 | 后端静态检查 | Ruff 代码与格式检查通过 |
+| 远端持续集成 | 实现提交 `f444348` 的 [11 项检查全部通过](https://github.com/MagDaob/finguard/actions/runs/40512310752)，包含 Windows、Linux、数据库和三个容器的联动 |
 
 测试命令见[前端入口](../frontend/README.md)和[测试说明](../tests/README.md)。持续集成新增 Windows、Linux 前端检查，并在容器任务中构建工作台、检查页面深链接和同源代理。远端结果以对应提交的 GitHub Actions 为准。
 
@@ -51,4 +52,4 @@
 
 生产运行还需完成身份、安全、容量和部署验收。FastAPI TestClient 当前出现一项 HTTPX 适配弃用警告，未影响 317 项回归结果。
 
-首轮远端 Windows 前端格式检查发现检出换行符差异，已通过前端目录的 Git 属性固定 LF。后端跨平台检查和 Linux 前端检查在该轮通过；修复后结果继续以最新提交的 GitHub Actions 为准。
+首轮远端 Windows 前端格式检查发现检出换行符差异，已通过前端目录的 Git 属性固定 LF，修复后的 11 项检查全部通过。隔离联调的停止文件入口也已实际验证：双服务正常退出，双库临时命名空间及会话令牌清理完成。
