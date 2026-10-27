@@ -14,6 +14,8 @@
 
 Windows 桌面边界检查位于 [test_desktop.py](test_desktop.py)，非 Windows 平台明确跳过。实际冻结后的 EXE 另做独立模拟转账、重复请求、重启持久化和退出清理检查，运行方法见[桌面说明](../docs/windows-desktop.md)。该检查不调用付费模型。
 
+发布检查位于 [test_release.py](test_release.py)，覆盖版本与许可冲突、文件摘要、Windows 路径、运行文件与已知秘密拒绝、报告过滤和既有附件保护。准备脚本在实际 EXE 自检后，将报告绑定到具体 ZIP；使用 `scripts/prepare-release.py --verify` 可复核已有附件。见[发布流程](../docs/releasing.md)。
+
 在项目根目录安装开发依赖，配置可创建命名空间的 PostgreSQL 测试数据库，然后运行：
 
 ```powershell
@@ -66,7 +68,7 @@ Windows 可使用[本机 PostgreSQL 脚本](../scripts/local-postgres.ps1)。未
 
 本地与远端结果分别核实。配置存在不代表执行成功，提交对应结果见 GitHub Actions。
 
-[windows-desktop.yml](../.github/workflows/windows-desktop.yml)在 Windows 上构建三个独立 EXE，取得校验过的数据库二进制，并运行实际桌面 EXE 自检。通过后上传完整便携包、SHA-256 和脱敏的自检结果，保留 14 天；不上传用户数据目录、配置或日志。
+[windows-desktop.yml](../.github/workflows/windows-desktop.yml)在 Windows 上构建三个独立 EXE，取得校验过的数据库二进制，并通过发布准备脚本运行实际 EXE 自检。通过后只上传版本目录中的统一附件集合，保留 14 天；不上传用户数据目录、配置或日志。
 
 ## DeepSeek 专项
 

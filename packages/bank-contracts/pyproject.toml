@@ -5,6 +5,8 @@ build-backend = "hatchling.build"
 [project]
 name = "finguard-bank-contracts"
 version = "0.3.0"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 description = "Shared bank wire contracts without application or simulator dependencies"
 requires-python = ">=3.12,<3.15"
 dependencies = ["pydantic>=2.12,<3"]

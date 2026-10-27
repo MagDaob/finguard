@@ -43,3 +43,5 @@
 前端位于 `frontend/`，采用 React、TypeScript、Vite、React Router、TanStack Query、Zod 与无损 JSON 解析。变更前端时执行相关组件检查及生产构建，保持内存会话、授权复检、整数金额和证据边界。联调优先使用 `scripts/frontend-qa.py` 的隔离模拟服务，避免修改演示数据或意外调用付费模型。
 
 Windows 桌面构建位于 `packaging/windows/`，与开发环境分开。桌面、后端和模拟银行分别冻结，数据保存在用户目录，不把开发 `.env`、密钥、令牌或数据库放入包。交付前运行独立数据目录下的实际 EXE 自检，保持各服务凭据隔离和退出清理。
+
+项目采用 Apache-2.0，独立 Python 发行包和桌面包保留 LICENSE、NOTICE。发布准备使用 `scripts/prepare-release.py --self-test`，交付只选择版本目录中的附件集合。已有附件不覆盖，旧构建和本机测试数据按归档映射保留。准备或上传构建产物不等于创建标签或公开 Release，具体范围遵循用户当前指令。

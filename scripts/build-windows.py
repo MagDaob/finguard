@@ -216,8 +216,10 @@ def assemble():
     (licenses / "npm-packages.json").write_text(
         json.dumps(npm_packages, indent=2), encoding="utf-8"
     )
+    for name in ("LICENSE", "NOTICE"):
+        shutil.copy2(ROOT / name, OUTPUT / name)
     (OUTPUT / "使用说明.txt").write_text(
-        "FinGuard 0.3.0 Windows x64 便携版\n\n双击 FinGuard.exe 启动。请保留整个目录，不能只复制主程序。\n需要 Microsoft Edge WebView2 Runtime（Windows 10/11 通常已安装）。\n\n数据位于 %LOCALAPPDATA%\\FinGuard；升级或重装不重置数据。\n模拟环境使用虚构账户，默认不调用付费模型。\n启动后点击‘进入本机工作台’，无需复制访问令牌。\n关闭窗口后等待安全退出，不要在任务执行中强制关机。\n当前项目尚未指定对外分发许可证；第三方许可见 licenses。\n",
+        "FinGuard 0.3.0 Windows x64 便携版\n\n双击 FinGuard.exe 启动。请保留整个目录，不能只复制主程序。\n目标系统为 Windows 10 1903 及之后版本、Windows 11 x64，需要 Microsoft Edge WebView2 Runtime。\n\n数据位于 %LOCALAPPDATA%\\FinGuard；升级或重装不重置数据。\n模拟环境使用虚构账户，默认不调用付费模型。\n启动后点击‘进入本机工作台’，无需复制访问令牌。\n关闭窗口后等待安全退出，不要在任务执行中强制关机。\n项目采用 Apache-2.0，许可和项目声明见 LICENSE、NOTICE；第三方许可见 licenses。\n",
         encoding="utf-8",
     )
     files = sorted(
@@ -236,11 +238,28 @@ def assemble():
     manifest = {
         "version": "0.3.0",
         "platform": "windows-x64",
+        "source_revision": subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+        ).strip(),
+        "source_dirty": bool(
+            subprocess.check_output(["git", "status", "--porcelain"], cwd=ROOT, text=True).strip()
+        ),
         "inputs": {
             p.relative_to(ROOT).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
             for p in [
-                *sorted((ROOT / "packaging/windows").glob("*.*")),
+                *sorted(
+                    p
+                    for p in (ROOT / "packaging/windows").iterdir()
+                    if p.is_file()
+                    and not p.name.startswith(".")
+                    and ".local." not in p.name
+                    and p.suffix in {".py", ".toml", ".lock", ".ps1", ".txt"}
+                ),
+                ROOT / "LICENSE",
+                ROOT / "NOTICE",
+                ROOT / "pyproject.toml",
                 ROOT / "uv.lock",
+                ROOT / "frontend/package.json",
                 ROOT / "frontend/package-lock.json",
                 ROOT / "scripts/build-windows.py",
             ]

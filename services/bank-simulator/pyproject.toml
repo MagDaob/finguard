@@ -5,6 +5,8 @@ build-backend = "hatchling.build"
 [project]
 name = "finguard-bank-simulator"
 version = "0.3.0"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
 description = "Isolated fictional bank service for FinGuard development"
 requires-python = ">=3.12,<3.15"
 dependencies = ["finguard-bank-contracts==0.3.0", "fastapi>=0.120,<1", "psycopg[binary]>=3.2,<4", "uvicorn>=0.38,<1"]

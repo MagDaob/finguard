@@ -1,6 +1,7 @@
 [project]
 name = "finguard-desktop-build"
 version = "0.3.0"
+license = "Apache-2.0"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "finguard==0.3.0",

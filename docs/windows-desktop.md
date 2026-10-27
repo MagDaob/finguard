@@ -64,7 +64,8 @@ Windows PostgreSQL 工具在部分中文路径下存在启动编码问题。构�
 | `dist/FinGuard/services/bank-simulator/` | 独立模拟银行与运行依赖 |
 | `dist/FinGuard/postgresql/` | 固定版本的数据库程序，不含数据目录 |
 | `dist/FinGuard/manifest.json` | 构建输入与包内文件的 SHA-256 清单 |
-| `dist/FinGuard/licenses/` | 第三方许可和依赖版本，不代表 FinGuard 已选择分发许可证 |
+| `dist/FinGuard/LICENSE`、`dist/FinGuard/NOTICE` | 项目的 Apache-2.0 许可与声明 |
+| `dist/FinGuard/licenses/` | 第三方许可和依赖版本 |
 | `dist/FinGuard-0.3.0-windows-x64.zip` | 可复制的完整便携包 |
 | `dist/FinGuard-0.3.0-windows-x64.zip.sha256` | 压缩包校验值 |
 
@@ -95,3 +96,5 @@ Get-Content $fgReport -Raw
 发生启动错误时，先保留数据，查看用户目录中的 `desktop.log`。提示文件不完整时重新解压完整便携包；提示受保护配置不可读时，确认使用原 Windows 用户。端口被其他程序占用、安装文件缺失或服务身份不匹配时，程序阻止进入工作台。不要删除数据库、修改交易状态或关闭系统安全保护来绕过故障。
 
 本次实际结果见[桌面验收记录](windows-desktop-validation.md)。[Windows 构建工作流](../.github/workflows/windows-desktop.yml)会在 GitHub Actions 构建便携包并运行实际 EXE 自检，通过后保留产物 14 天。
+
+对外交付使用[发布流程](releasing.md)生成的 `dist/releases/<版本>/windows-x64/` 附件集合。该集合包含软件、说明、项目许可、摘要和与实际包绑定的 EXE 验证结果；本机运行目录和历史测试数据分开保存。

@@ -10,6 +10,10 @@ FinGuard 是一个面向金融任务的工作台与可恢复后端。它把用�
 
 也可从 [Windows desktop 构建工作流](https://github.com/MagDaob/finguard/actions/workflows/windows-desktop.yml)下载最近通过的运行产物。云端产物保留 14 天，源码与构建入口持续保存在仓库。
 
+交付材料统一保存在 `dist/releases/<版本>/windows-x64/`，包含软件包、使用与版本说明、Apache-2.0 许可、依赖清单及与压缩包绑定的验收结果。整理与验证方法见[发布流程](docs/releasing.md)，当前变化见[变更记录](CHANGELOG.md)，完整导航见[文档索引](docs/README.md)。准备交付材料不表示已经公开发布。
+
+![Windows 桌面模拟工作台，使用虚构账户和数据](docs/assets/screenshots/desktop-workbench.png)
+
 项目本体位于 `src/finguard/`，模拟银行位于独立的 `services/bank-simulator/`。两边分开运行环境、配置、进程、数据库和账号，通过认证 HTTP 接口通信，见[服务隔离说明](docs/service-isolation.md)。
 
 银行、模型和插件的接口准备层已实现，包含标准类型、受信注册入口、模式目录和本地校验 API。它们不激活新连接，也不执行第三方插件，见[扩展接口说明](docs/extension-interfaces.md)。
@@ -110,7 +114,7 @@ uv run --locked ruff check .
 uv run --locked ruff format --check .
 uv run --locked pytest -q
 uv run --locked finguard replay --suite tests/scenarios/backend-replay.json
-uv build --all --no-sources
+uv build --all --no-sources --out-dir dist/python/0.3.0
 ```
 
 数据库测试使用随机命名空间，结束后仅清理本次命名空间。未配置数据库时，相关测试会跳过；设置 `FINGUARD_REQUIRE_POSTGRES=1` 可要求数据库检查必须执行。纯单元测试使用 `pytest -m "not postgres"`。
@@ -147,4 +151,4 @@ uv build --all --no-sources
 
 金额只支持人民币整数分，模拟报价费用为零。理财没有净值波动、收益计算或真实交易日历。卡片只支持临时锁定，订阅取消不撤销代扣协议。转账没有自动反向付款；卡片补偿需创建新任务并重新授权。
 
-本版本用于开发、集成和模拟验收。真实服务必须重新验证其幂等、查询、回调和授权机制。正式登录、额外身份验证、连接激活和插件执行尚未实现。许可证尚未确定。
+本版本用于开发、集成和模拟验收。真实服务必须重新验证其幂等、查询、回调和授权机制。正式登录、额外身份验证、连接激活和插件执行尚未实现。项目采用 [Apache-2.0](LICENSE)，项目声明见 [NOTICE](NOTICE)；第三方组件分别保留其许可。

@@ -3,9 +3,9 @@ FROM python:3.14-slim
 COPY --from=uv /uv /usr/local/bin/uv
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy UV_CACHE_DIR=/tmp/uv-cache PYTHONUNBUFFERED=1
 WORKDIR /app
-COPY pyproject.toml uv.lock README.md ./
+COPY pyproject.toml uv.lock README.md LICENSE NOTICE ./
 COPY packages/bank-contracts ./packages/bank-contracts
-COPY packages/plugin-contracts/pyproject.toml ./packages/plugin-contracts/pyproject.toml
+COPY packages/plugin-contracts/pyproject.toml packages/plugin-contracts/LICENSE packages/plugin-contracts/NOTICE ./packages/plugin-contracts/
 COPY services/bank-simulator ./services/bank-simulator
 RUN uv sync --locked --no-dev --package finguard-bank-simulator \
     && uv cache clean \
