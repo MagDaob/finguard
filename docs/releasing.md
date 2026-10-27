@@ -2,6 +2,8 @@
 
 FinGuard 当前准备 0.3.0 Windows x64 预览候选，采用 Apache-2.0。本流程整理和验证交付附件，不创建 Git 标签、GitHub Release，也不上传用户数据。
 
+本次实际整理、归档和验证结果见[发布准备记录](release-preparation-validation.md)。
+
 ## 目录职责
 
 | 路径 | 职责与交付规则 |

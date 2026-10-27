@@ -8,6 +8,7 @@
 |---|---|
 | [Windows 桌面版](windows-desktop.md) | 便携软件启动、数据位置、构建和排障 |
 | [发布准备](releasing.md) | 文件布局、许可、版本校验、附件和发布边界 |
+| [发布准备记录](release-preparation-validation.md) | 当前许可、附件摘要和实际验证结果 |
 | [0.3.0 发布说明](releases/0.3.0.md) | 当前候选的变化、兼容性和限制 |
 | [变更记录](../CHANGELOG.md) | 版本状态与交付记录 |
 | [API 使用](api.md)、[后端运行](backend.md) | 认证、业务接口、配置和部署 |
