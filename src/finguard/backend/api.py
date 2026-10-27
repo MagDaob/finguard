@@ -164,6 +164,10 @@ def create_app(settings: Settings | None = None, planner=None, *, bank=None) -> 
     # 函数局部依赖必须使用实际对象，供 FastAPI 生成可验证的 OpenAPI。
     actor_dependency = Depends(current_actor)
 
+    from finguard.integrations.api import register_integration_routes
+
+    register_integration_routes(app, settings, backend.security, current_actor)
+
     @app.exception_handler(ServiceError)
     async def service_error(_request: Request, exc: ServiceError):
         return JSONResponse(

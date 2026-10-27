@@ -3,6 +3,7 @@
 from typing import Protocol
 
 import httpx
+from finguard_bank_contracts.connections import BankCapabilities
 from finguard_bank_contracts.errors import (
     NotSubmitted as NotSubmitted,
 )
@@ -17,6 +18,7 @@ from finguard.backend.errors import ServiceError
 
 
 class Bank(Protocol):
+    def get_capabilities(self) -> BankCapabilities: ...
     def list_accounts(self, subject: str) -> list[dict]: ...
     def list_recipients(self, subject: str) -> list[dict]: ...
     def list_services(self, subject: str, kind: str) -> list[dict]: ...
@@ -51,13 +53,19 @@ class HttpBank:
 
     @classmethod
     def configured(cls, settings):
-        if not settings.bank_api_key:
-            raise ServiceError("BANK_NOT_CONFIGURED", "请配置独立银行服务的访问密钥。", 503)
-        return cls(
-            settings.bank_url,
-            settings.bank_api_key.get_secret_value(),
-            settings.bank_timeout_seconds,
-        )
+        from finguard.integrations.banks import configured_bank
+
+        return configured_bank(settings)
+
+    def get_capabilities(self) -> BankCapabilities:
+        try:
+            response = self.client.get("/v1/capabilities")
+            response.raise_for_status()
+            return BankCapabilities.model_validate_json(response.content)
+        except (httpx.HTTPError, ValueError) as exc:
+            raise ServiceError(
+                "BANK_CAPABILITIES_UNAVAILABLE", "银行能力声明不可用。", 503
+            ) from exc
 
     def close(self):
         self.client.close()

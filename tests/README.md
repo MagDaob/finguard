@@ -1,5 +1,7 @@
 # 验证要求
 
+扩展契约检查位于 `tests/contracts/`，认证 API 检查位于 `tests/backend/test_integration_api.py`。它们使用本地声明、测试替身和随机数据库命名空间，不调用真实银行或新增模型服务。具体边界见[扩展接口](../docs/extension-interfaces.md)。
+
 当前覆盖领域规则、模拟银行、持久化授权与执行、HTTP 接口、计划控制、回放和策略发布。全部业务输入为虚构数据。实际执行记录见[后端验收](../docs/backend-validation.md)。
 
 模拟器通过开发依赖显式安装。普通回归使用随机同库夹具；双进程恢复测试使用分开的随机命名空间，通过认证 HTTP 通信。新增检查覆盖服务密钥、参数校验、超时不重提和旧账本归档，见[服务隔离](../docs/service-isolation.md)。

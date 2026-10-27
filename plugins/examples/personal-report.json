@@ -1,0 +1,33 @@
+{
+  "interface_version": "1.0",
+  "plugin_id": "personal-report",
+  "version": "1.0.0",
+  "kind": "report",
+  "entrypoint": "contract_only",
+  "requested_permissions": ["transactions.read"],
+  "config_schema": {
+    "type": "object",
+    "properties": {"title": {"type": "string", "maxLength": 100}},
+    "additionalProperties": false
+  },
+  "tools": [
+    {
+      "name": "summarize",
+      "description": "只读月报接口声明；本示例不包含执行实现。",
+      "effect": "read",
+      "permissions": ["transactions.read"],
+      "input_schema": {
+        "type": "object",
+        "properties": {"days": {"type": "integer", "minimum": 1, "maximum": 366}},
+        "required": ["days"],
+        "additionalProperties": false
+      },
+      "output_schema": {
+        "type": "object",
+        "properties": {"summary": {"type": "string", "maxLength": 2000}},
+        "required": ["summary"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

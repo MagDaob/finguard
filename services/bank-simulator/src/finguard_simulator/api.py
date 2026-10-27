@@ -85,6 +85,10 @@ def create_app(settings: Settings | None = None):
             c.execute("SELECT 1 FROM simulator_migrations LIMIT 1")
         return {"status": "ready", "service": "bank-simulator"}
 
+    @app.get("/v1/capabilities", dependencies=[Depends(authenticated)])
+    def capabilities():
+        return bank.get_capabilities().model_dump(mode="json")
+
     @app.post("/v1/bank/{method}", dependencies=[Depends(authenticated)])
     def call(
         method: Literal[

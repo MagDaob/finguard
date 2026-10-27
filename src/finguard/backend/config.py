@@ -13,6 +13,8 @@ class Settings(BaseModel):
     database_url: SecretStr
     database_schema: str = Field(default="finguard", pattern=r"^[a-z][a-z0-9_]{0,62}$")
     bank_url: str = "http://127.0.0.1:8001"
+    bank_provider: str = "simulated-bank"
+    bank_environment: Literal["simulation", "external"] = "simulation"
     bank_api_key: SecretStr | None = None
     bank_timeout_seconds: float = Field(default=10, ge=1, le=60)
     worker_enabled: bool = True

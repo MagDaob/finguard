@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12,<3.15"
 dependencies = [
     "finguard-bank-contracts==0.3.0",
+    "finguard-plugin-contracts==0.3.0",
     "fastapi>=0.120,<1",
     "httpx>=0.28,<1",
     "psycopg[binary]>=3.2,<4",
@@ -24,10 +25,11 @@ finguard = "finguard.cli:main"
 dev = ["pytest>=8.4,<10", "ruff>=0.14,<1", "finguard-bank-simulator==0.3.0"]
 
 [tool.uv.workspace]
-members = ["packages/bank-contracts", "services/bank-simulator"]
+members = ["packages/bank-contracts", "packages/plugin-contracts", "services/bank-simulator"]
 
 [tool.uv.sources]
 finguard-bank-contracts = { workspace = true }
+finguard-plugin-contracts = { workspace = true }
 finguard-bank-simulator = { workspace = true }
 
 [tool.hatch.build.targets.wheel]

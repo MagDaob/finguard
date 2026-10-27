@@ -8,6 +8,8 @@ FinGuard 是一个面向金融任务的可恢复后端。它把用户目标转�
 
 项目本体位于 `src/finguard/`，模拟银行位于独立的 `services/bank-simulator/`。两边分开运行环境、配置、进程、数据库和账号，通过认证 HTTP 接口通信，见[服务隔离说明](docs/service-isolation.md)。
 
+银行、模型和插件的接口准备层已实现，包含标准类型、受信注册入口、模式目录和本地校验 API。它们不激活新连接，也不执行第三方插件，见[扩展接口说明](docs/extension-interfaces.md)。
+
 ## 设计与能力
 
 系统显式关联任务、计划、授权、操作和证据。模型只能提出候选计划，确定性程序负责权限、参数、依赖、限额和业务规则。
@@ -111,7 +113,8 @@ uv build --all --no-sources
 | [docs/domain-model.md](docs/domain-model.md) | 核心对象、状态和持久化关联 |
 | [docs/decisions.md](docs/decisions.md) | 已采用的选型与代价 |
 | [docs/roadmap.md](docs/roadmap.md)、[docs/implementation-plan.md](docs/implementation-plan.md) | 当前阶段与剩余工作 |
-| [docs/integration-platform-plan.md](docs/integration-platform-plan.md) | 银行、模型 API 和用户插件的接口准备规划；不含新增真实适配，待实施 |
+| [docs/integration-platform-plan.md](docs/integration-platform-plan.md) | 接口准备的范围与实施阶段 |
+| [docs/extension-interfaces.md](docs/extension-interfaces.md) | 已实现契约、本地校验 API 与开发说明 |
 | [tests/backend/](tests/backend/) | PostgreSQL、并发、授权、恢复、HTTP 和优化流程测试 |
 | [docs/sources/project-framework.txt](docs/sources/project-framework.txt) | 用户提供的完整框架原文 |
 

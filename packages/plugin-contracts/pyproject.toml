@@ -1,0 +1,13 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "finguard-plugin-contracts"
+version = "0.3.0"
+description = "FinGuard plugin declarations and invocation contracts without code execution"
+requires-python = ">=3.12,<3.15"
+dependencies = ["pydantic>=2.12,<3", "jsonschema>=4.23,<5"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/finguard_plugin_contracts"]

@@ -21,4 +21,6 @@
 
 模拟业务与测试回放实现位于独立的 [bank-simulator](../services/bank-simulator/)，共享契约位于 [bank-contracts](../packages/bank-contracts/)。在线应用环境不安装模拟器，见[服务隔离](../docs/service-isolation.md)。
 
+扩展入口位于 [integrations/](finguard/integrations/) 和 [plugins/](finguard/plugins/)，提供银行注册、模型契约、本地校验及插件声明管理。独立 [plugin-contracts](../packages/plugin-contracts/) 提供清单与调用格式，详见[扩展接口](../docs/extension-interfaces.md)。
+
 DeepSeek 官方接口与工具循环位于 [deepseek.py](finguard/backend/deepseek.py)，统一选择入口为 [model_factory.py](finguard/backend/model_factory.py)。真实吞吐及 Agent 对照测试位于 [benchmark.py](finguard/backend/benchmark.py)，按 [专项协议](../docs/deepseek-design.md)显式启动。

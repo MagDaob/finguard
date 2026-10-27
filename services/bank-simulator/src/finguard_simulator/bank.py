@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 from finguard_bank_contracts.actions import ACTIONS, operation_digest
+from finguard_bank_contracts.connections import BankCapabilities
 from finguard_bank_contracts.errors import (
     NotSubmitted,
     ResultUnknown,
@@ -23,6 +24,18 @@ def new_ref(prefix):
 class SimulatedBank:
     def __init__(self, database: Database):
         self.db = database
+
+    def get_capabilities(self) -> BankCapabilities:
+        return BankCapabilities(
+            provider="simulated-bank",
+            environment="simulation",
+            supported_actions=tuple(ACTIONS),
+            stable_operation_identity=True,
+            lookup_by_operation=True,
+            evidence=True,
+            atomic_minimum_balance=True,
+            fence_absent_operation=True,
+        )
 
     def inject_fault(self, operation_ref: str, mode: str, count: int = 1) -> None:
         require(
