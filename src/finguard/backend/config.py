@@ -38,6 +38,7 @@ class Settings(BaseModel):
     deepseek_loop_seconds: float = Field(default=120, ge=10, le=600)
     evaluation_enabled: bool = False
     cors_origins: tuple[str, ...] = ()
+    frontend_directory: Path = Path("frontend/dist")
 
     @classmethod
     def from_env(cls, env_file: Path | None = Path(".env")) -> "Settings":

@@ -517,4 +517,7 @@ def create_app(settings: Settings | None = None, planner=None, *, bank=None) -> 
         evaluation_access(actor)
         return policies.rollback(actor, candidate_ref)
 
+    from finguard.backend.web import register_workbench
+
+    register_workbench(app, settings.frontend_directory)
     return app

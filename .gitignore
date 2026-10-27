@@ -30,6 +30,10 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+node_modules/
+/frontend/dist/
+/frontend/coverage/
+*.tsbuildinfo
 .DS_Store
 Thumbs.db
 *.swp

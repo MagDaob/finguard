@@ -13,6 +13,26 @@ permissions:
   contents: read
 
 jobs:
+  frontend:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "24.12.0"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm test
+      - run: npm run build
   check:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -70,6 +90,7 @@ jobs:
       - run: docker run --rm finguard:check /app/.venv/bin/python -c "import importlib.util; assert importlib.util.find_spec('finguard_simulator') is None"
       - run: docker build -f services/bank-simulator/Dockerfile -t finguard-simulator:check .
       - run: docker run --rm finguard-simulator:check /app/.venv/bin/python -c "import importlib.util; assert importlib.util.find_spec('finguard') is None"
+      - run: docker build -f frontend/Dockerfile -t finguard-frontend:check .
       - name: Run Compose backend and database
         run: |
           export FINGUARD_POSTGRES_PASSWORD="$(openssl rand -hex 32)"
@@ -77,7 +98,9 @@ jobs:
           export FINGUARD_BANK_API_KEY="$(openssl rand -hex 32)"
           trap 'docker compose logs --tail 100; docker compose down' EXIT
           docker compose config --quiet
-          docker compose up -d --wait --wait-timeout 120
+          docker compose up -d --wait --wait-timeout 180
           docker compose exec -T bank-simulator /app/.venv/bin/finguard-bank-simulator seed-demo
           docker compose exec -T backend uv run --locked --no-sync finguard seed-demo
           docker compose exec -T backend uv run --locked --no-sync finguard worker --once
+          docker compose exec -T frontend wget -q -O /dev/null http://127.0.0.1/tasks
+          docker compose exec -T frontend wget -q -O - http://127.0.0.1/health/ready

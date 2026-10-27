@@ -1,8 +1,8 @@
 # FinGuard
 
-FinGuard 是一个面向金融任务的可恢复后端。它把用户目标转换为可校验的计划，在服务端授权范围内执行，并用业务记录、流水和余额证据核实结果。
+FinGuard 是一个面向金融任务的工作台与可恢复后端。它把用户目标转换为可校验的计划，在服务端授权范围内执行，并用业务记录、流水和余额证据核实结果。
 
-**当前版本：0.3.0，模拟业务后端。** 已实现转账、账单、理财申赎、临时锁卡、订阅取消和条件组合任务。接口、持久化执行、授权、后台恢复、轨迹、回放和策略发布流程均可运行。现已加入 DeepSeek 官方 API、自适应简单任务规划和有界工具循环，见 [Agent 设计](docs/deepseek-design.md)。全部业务使用虚构数据；小规模真实调用及 Agent 对照已通过，结果见 [DeepSeek 验收](docs/deepseek-validation.md)。真实银行接入和前端工作台属于后续范围。
+**当前版本：0.3.0，模拟业务工作台。** 已实现转账、账单、理财申赎、临时锁卡、订阅取消和条件组合任务。前端提供任务计划、逐项确认、结果凭证、业务页面和开发诊断，见[前端入口](frontend/README.md)及[验收记录](docs/frontend-validation.md)。后端包含持久化执行、授权、恢复、轨迹、回放和策略发布流程。DeepSeek 官方 API、自适应规划与有界工具循环见 [Agent 设计](docs/deepseek-design.md)。全部业务使用虚构数据；此前小规模真实模型调用及 Agent 对照结果见 [DeepSeek 验收](docs/deepseek-validation.md)。真实银行和正式身份服务仍待接入。
 
 项目位于公开仓库 [MagDaob/finguard](https://github.com/MagDaob/finguard)。后续开发按可验证的改动持续同步。
 
@@ -70,6 +70,19 @@ uv run --locked finguard seed-demo
 
 打开 [API 文档](http://127.0.0.1:8000/docs)；[就绪检查](http://127.0.0.1:8000/health/ready)应返回 `ready`。演示访问令牌保存在本地 `artifacts/demo-tokens.local.json`，有效期为 24 小时。到期后执行 `seed-demo --rotate`；旧令牌如未撤销，会按原期限到期。
 
+安装 Node.js 24.12.0 后，构建前端：
+
+```powershell
+Set-Location frontend
+npm ci
+npm run build
+Set-Location ..
+.\scripts\local-services.ps1 stop
+.\scripts\local-services.ps1 start
+```
+
+打开[任务工作台](http://127.0.0.1:8000/tasks)，输入本机演示访问令牌。令牌只保存在页面内存中，刷新后需重新输入。开发模式和独立前端容器见[前端说明](frontend/README.md)。工作台的新任务会使用后端当前配置的模型；配置付费模型时可能产生调用费用。
+
 在另一终端运行模拟转账：
 
 ```powershell
@@ -107,6 +120,7 @@ uv build --all --no-sources
 | 路径 | 内容 |
 |---|---|
 | [src/finguard/backend/](src/finguard/backend/) | 项目接口、存储、执行控制、规划、银行客户端与评估入口 |
+| [frontend/](frontend/) | React 工作台、接口校验、组件测试与独立容器 |
 | [services/bank-simulator/](services/bank-simulator/) | 独立模拟银行、账本、业务数据、故障与离线回放 |
 | [packages/bank-contracts/](packages/bank-contracts/) | 双方共享的参数、摘要与错误契约 |
 | [src/finguard/domain/](src/finguard/domain/) | 金额、引用、核心对象及状态迁移守卫 |
@@ -115,7 +129,7 @@ uv build --all --no-sources
 | [docs/domain-model.md](docs/domain-model.md) | 核心对象、状态和持久化关联 |
 | [docs/decisions.md](docs/decisions.md) | 已采用的选型与代价 |
 | [docs/roadmap.md](docs/roadmap.md)、[docs/implementation-plan.md](docs/implementation-plan.md) | 当前阶段与剩余工作 |
-| [docs/frontend-design.md](docs/frontend-design.md) | 前端工作台设计：页面、交互、状态、视觉与接口边界；尚未实现 |
+| [docs/frontend-design.md](docs/frontend-design.md)、[docs/frontend-validation.md](docs/frontend-validation.md) | 前端设计、实现范围、验证和剩余接口 |
 | [docs/integration-platform-plan.md](docs/integration-platform-plan.md) | 接口准备的范围与实施阶段 |
 | [docs/extension-interfaces.md](docs/extension-interfaces.md) | 已实现契约、本地校验 API 与开发说明 |
 | [docs/understanding-and-privacy.md](docs/understanding-and-privacy.md) | 输入完整性、账单区间、关联追问、分级验证与脱敏 |
@@ -128,4 +142,4 @@ uv build --all --no-sources
 
 金额只支持人民币整数分，模拟报价费用为零。理财没有净值波动、收益计算或真实交易日历。卡片只支持临时锁定，订阅取消不撤销代扣协议。转账没有自动反向付款；卡片补偿需创建新任务并重新授权。
 
-本版本用于后端开发、集成和模拟验收。真实服务必须重新验证其幂等、查询、回调和授权机制。许可证尚未确定。
+本版本用于开发、集成和模拟验收。真实服务必须重新验证其幂等、查询、回调和授权机制。正式登录、额外身份验证、连接激活和插件执行尚未实现。许可证尚未确定。

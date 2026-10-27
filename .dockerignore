@@ -18,3 +18,5 @@ tests
 **/.venv
 **/artifacts
 **/dist
+**/node_modules
+**/*.tsbuildinfo
