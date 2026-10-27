@@ -115,6 +115,7 @@ uv build --all --no-sources
 | [docs/domain-model.md](docs/domain-model.md) | 核心对象、状态和持久化关联 |
 | [docs/decisions.md](docs/decisions.md) | 已采用的选型与代价 |
 | [docs/roadmap.md](docs/roadmap.md)、[docs/implementation-plan.md](docs/implementation-plan.md) | 当前阶段与剩余工作 |
+| [docs/frontend-design.md](docs/frontend-design.md) | 前端工作台设计：页面、交互、状态、视觉与接口边界；尚未实现 |
 | [docs/integration-platform-plan.md](docs/integration-platform-plan.md) | 接口准备的范围与实施阶段 |
 | [docs/extension-interfaces.md](docs/extension-interfaces.md) | 已实现契约、本地校验 API 与开发说明 |
 | [docs/understanding-and-privacy.md](docs/understanding-and-privacy.md) | 输入完整性、账单区间、关联追问、分级验证与脱敏 |
