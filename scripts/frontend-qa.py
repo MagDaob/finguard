@@ -27,10 +27,12 @@ def main():
     root = Path(__file__).resolve().parents[1]
     runtime = root / "artifacts" / "frontend-qa"
     runtime.mkdir(parents=True, exist_ok=True)
+    stop_file = runtime / "stop.local"
     for port in (8002, 8003):
         with socket.socket() as probe:
             if probe.connect_ex(("127.0.0.1", port)) == 0:
                 raise RuntimeError(f"QA port {port} is already in use")
+    stop_file.unlink(missing_ok=True)
     schema = "fgui_" + uuid4().hex[:20]
     settings = Settings.from_env(root / ".env")
     simulator = SimulatorSettings.from_env(root / "services/bank-simulator/.env")
@@ -111,7 +113,7 @@ def main():
             "QA_READY api=http://127.0.0.1:8002 session=artifacts/frontend-qa/session.local.json",
             flush=True,
         )
-        while all(p.poll() is None for p in processes):
+        while not stop_file.exists() and all(p.poll() is None for p in processes):
             time.sleep(1)
     finally:
         for process in reversed(processes):
@@ -126,6 +128,8 @@ def main():
                 connection.execute(
                     sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE").format(sql.Identifier(schema))
                 )
+        (runtime / "session.local.json").unlink(missing_ok=True)
+        stop_file.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

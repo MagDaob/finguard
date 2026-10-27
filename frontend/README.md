@@ -64,3 +64,5 @@ npm run build
 ```
 
 实际检查及限制见[前端验收记录](../docs/frontend-validation.md)。模拟双服务验收可从根目录运行 `uv run --locked python scripts/frontend-qa.py`，另在本目录设置 `FINGUARD_API_TARGET=http://127.0.0.1:8002` 后启动开发服务器。QA 服务使用临时双数据库命名空间、虚构数据和确定性规划器；按 Ctrl+C 退出后清理本次命名空间。令牌和日志只保存在忽略的 `artifacts/frontend-qa/`。
+
+由后台终端启动时，可在项目根目录执行 `New-Item artifacts/frontend-qa/stop.local -ItemType File -Force` 请求正常关闭。脚本停止自有子进程、清理本次命名空间并移除临时令牌。强制结束整个进程树可能跳过退出清理。
