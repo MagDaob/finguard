@@ -5,7 +5,7 @@
 | 平台分类 | 内容来源 | 交付格式 |
 |---|---|---|
 | 技术文档 | [技术文档](technical-document.md) | PDF，含架构、核心算法和安全设计 |
-| 答辩材料 | [逐页讲稿](defense-script.md) | 12 页 PPTX 与 PDF，建议 8 分 50 秒 |
+| 答辩材料 | [逐页讲稿](defense-script.md)、[演示设计](presentation-design.md) | 12 页 PPTX 与 PDF，建议 8 分 50 秒 |
 | 源码与部署 | [部署入口](deployment.md)、受版本管理文件 | ZIP，含 README、部署说明与测试 |
 | 安全自评 | [安全报告](security-self-assessment.md) | PDF，含权限矩阵、控制映射与风险 |
 
