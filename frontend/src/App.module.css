@@ -1,181 +1,158 @@
 .shell {
     min-height: 100vh;
     display: grid;
-    grid-template-columns: 208px minmax(0, 1fr);
-    grid-template-rows: 72px 1fr;
-    background: var(--bg);
+    grid-template-columns: 220px minmax(0, 1fr);
+    grid-template-rows: 68px 1fr;
+    background: #fff;
 }
 .header {
     grid-column: 1/-1;
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    background: #fff;
-    border-bottom: 1px solid var(--line);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 28px;
+    border-bottom: 3px solid #000;
     gap: 12px;
+    padding: 0 24px;
+    background: #fff;
+    position: sticky;
+    top: 0;
+    z-index: 20;
 }
 .brand {
+    font-size: 24px;
+    font-weight: 900;
+    color: #000;
     display: flex;
     align-items: center;
     gap: 10px;
-    color: var(--ink);
-    font-size: 21px;
-    letter-spacing: -0.7px;
-    font-weight: 750;
 }
 .logo {
-    width: 34px;
-    height: 37px;
-    border: 2px solid var(--primary);
-    border-radius: 9px 9px 14px 14px;
+    background: #ff0;
+    color: #000;
+    border: 3px solid #000;
+    width: 30px;
+    height: 30px;
     display: grid;
     place-items: center;
-    color: var(--primary);
-    font-size: 18px;
-    font-weight: 800;
+    transform: rotate(-10deg);
 }
 .headerRight {
     display: flex;
     align-items: center;
     gap: 16px;
-    font-size: 13px;
-    color: var(--muted);
+    font-size: 12px;
 }
 .sidebar {
-    background: #fafcfc;
-    border-right: 1px solid var(--line);
+    background: #000;
+    color: #fff;
+    padding: 24px 16px;
     position: sticky;
-    top: 72px;
-    height: calc(100vh - 72px);
-    padding: 26px 16px;
+    top: 68px;
+    height: calc(100vh - 68px);
+    overflow: auto;
     display: flex;
     flex-direction: column;
     gap: 24px;
-    overflow: auto;
+}
+.newTask {
+    background: #ff0;
+    color: #000;
+    padding: 14px;
+    font-weight: 900;
+    display: block;
 }
 .nav {
     display: grid;
-    gap: 6px;
+    gap: 4px;
 }
 .nav a {
+    color: #fff;
     display: flex;
-    align-items: center;
-    gap: 11px;
-    padding: 11px 13px;
-    border-radius: 8px;
-    font-size: 14px;
-    color: var(--muted);
-    font-weight: 550;
+    gap: 10px;
+    padding: 12px 4px;
+    font-size: 13px;
 }
 .nav a[aria-current] {
-    background: var(--primary-soft);
-    color: var(--primary);
+    background: #00f;
+}
+.resources summary {
+    cursor: pointer;
+    font-weight: 800;
 }
 .footnote {
     margin-top: auto;
-    padding: 14px 10px;
-    border-top: 1px solid var(--line);
+    border-top: 2px solid #fff;
+    padding-top: 16px;
     font-size: 12px;
-    color: var(--muted);
-    line-height: 1.8;
 }
 .main {
     min-width: 0;
     padding: 32px;
 }
+.menu {
+    display: none;
+}
 .login {
     grid-column: 1/-1;
     display: grid;
     place-items: center;
-    padding: 40px 20px;
-    min-height: calc(100vh - 72px);
-    background: radial-gradient(ellipse at 20% 15%, #e5f2ed 0, transparent 45%), var(--bg);
+    padding: 32px 16px;
+    min-height: calc(100vh - 68px);
 }
 .loginCard {
-    width: min(100%, 480px);
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 18px;
+    border: 4px solid #000;
     padding: 36px;
-    box-shadow: 0 15px 70px #183c2e09;
+    width: min(100%, 520px);
 }
-@media (max-width: 1279px) {
+@media (max-width: 960px) {
     .shell {
-        grid-template-columns: 76px minmax(0, 1fr);
-    }
-    .sidebar {
-        padding: 24px 10px;
-    }
-    .nav a {
-        justify-content: center;
-        padding: 12px 8px;
-    }
-    .nav a span,
-    .footnote {
-        display: none;
+        grid-template-columns: 192px minmax(0, 1fr);
     }
     .main {
-        padding: 24px;
+        padding: 24px 16px;
     }
-    .header {
-        padding: 0 22px;
+    .headerRight > span:first-child {
+        display: none;
     }
 }
-@media (max-width: 767px) {
+@media (max-width: 600px) {
     .shell {
         display: block;
     }
     .header {
         height: 68px;
-        padding: 0 16px;
-        position: sticky;
-    }
-    .headerRight {
+        padding: 0 12px;
         gap: 8px;
-    }
-    .headerRight > span {
-        display: none;
     }
     .brand {
         font-size: 18px;
     }
-    .sidebar {
-        position: static;
-        top: auto;
+    .headerRight .identity {
+        max-width: 90px;
+        overflow-wrap: anywhere;
+    }
+    .menu {
         display: block;
+        min-width: 44px;
+    }
+    .sidebar {
+        display: none;
+        position: static;
         height: auto;
-        padding: 8px 10px;
-        border-right: 0;
-        border-bottom: 1px solid var(--line);
-        overflow-x: auto;
     }
-    .nav {
+    .sidebar.open {
         display: flex;
-        gap: 4px;
-    }
-    .nav a {
-        flex: none;
-        padding: 9px 12px;
-        min-height: 44px;
-    }
-    .nav a span {
-        display: inline;
-        font-size: 12px;
-    }
-    .nav a svg {
-        width: 16px;
     }
     .main {
-        padding: 20px 14px;
+        padding: 20px 12px;
     }
     .loginCard {
-        padding: 24px;
+        padding: 20px;
     }
-    .login {
-        min-height: calc(100vh - 68px);
+    .headerRight {
+        gap: 4px;
+    }
+    .headerRight > span {
+        display: none;
     }
 }

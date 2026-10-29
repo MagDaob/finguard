@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App'
 import { Providers } from './session'
 import './styles.css'
+import './geometric.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
     <React.StrictMode>

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, type FormEvent } from 'react'
+import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react'
 import { NavLink, Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom'
 import {
     Beaker,
@@ -15,7 +15,7 @@ import {
 import { useSession } from './session'
 import { ErrorNotice, Field, Loading } from './ui'
 import { desktopSession, useDesktop } from './desktop'
-import { TasksPage } from './tasks'
+import { TasksPage, TaskHistory } from './tasks'
 import styles from './App.module.css'
 
 const AccountsPage = lazy(() => import('./business').then((m) => ({ default: m.AccountsPage })))
@@ -126,6 +126,9 @@ function Login() {
 }
 export default function App() {
     const { me, epoch } = useSession()
+    const [menuOpen, setMenuOpen] = useState(false)
+    const location = useLocation()
+    useEffect(() => setMenuOpen(false), [location.pathname])
     const links = [
         ['/tasks', '任务工作台', FolderKanban],
         ['/accounts', '账户与账单', Wallet],
@@ -141,6 +144,16 @@ export default function App() {
                 <NavLink to="/tasks" className={styles.brand}>
                     <span className={styles.logo}>F</span>FinGuard
                 </NavLink>
+                {me && (
+                    <button
+                        className={styles.menu}
+                        aria-expanded={menuOpen}
+                        aria-label="切换导航"
+                        onClick={() => setMenuOpen(!menuOpen)}
+                    >
+                        ☰
+                    </button>
+                )}
                 <div className={styles.headerRight}>
                     <span>金融任务工作台</span>
                     <span className="environment">
@@ -160,15 +173,25 @@ export default function App() {
                 <Login />
             ) : (
                 <>
-                    <aside className={styles.sidebar}>
-                        <nav aria-label="主导航" className={styles.nav}>
-                            {links.map(([to, title, Icon]) => (
-                                <NavLink key={String(to)} to={String(to)}>
-                                    <Icon size={19} />
-                                    <span>{String(title)}</span>
-                                </NavLink>
-                            ))}
-                        </nav>
+                    <aside className={`${styles.sidebar} ${menuOpen ? styles.open : ''}`}>
+                        <NavLink className={styles.newTask} to="/tasks">
+                            ＋ 新建任务
+                        </NavLink>
+                        <Routes>
+                            <Route path="/tasks/:taskRef?" element={<TaskHistory />} />
+                            <Route path="*" element={<TaskHistory />} />
+                        </Routes>
+                        <details className={styles.resources}>
+                            <summary>资金、授权与设置</summary>
+                            <nav aria-label="主导航" className={styles.nav}>
+                                {links.map(([to, title, Icon]) => (
+                                    <NavLink key={String(to)} to={String(to)}>
+                                        <Icon size={19} />
+                                        <span>{String(title)}</span>
+                                    </NavLink>
+                                ))}
+                            </nav>
+                        </details>
                         <div className={styles.footnote}>
                             <ShieldCheck size={17} />
                             <br />

@@ -5,24 +5,20 @@ import { z } from 'zod'
 import {
     ArrowDownLeft,
     ArrowRight,
-    ArrowUpRight,
     Check,
     CheckCircle2,
     ChevronRight,
-    Clock3,
-    FileCheck2,
     ListFilter,
-    Plus,
     RefreshCw,
     ShieldCheck,
     Square,
-    Wallet,
     X,
 } from 'lucide-react'
 import {
     ApiError,
     approvalSchema,
     delegationSchema,
+    eventSchema,
     newRef,
     objectSchema,
     stepSchema,
@@ -73,220 +69,104 @@ export const inputStep = (s: Step): Step => ({
     depends_on: s.depends_on ?? [],
     funds_available_after: s.funds_available_after ?? [],
 })
-export function TasksPage() {
+export function TaskHistory() {
     const { taskRef } = useParams(),
-        navigate = useNavigate(),
-        location = useLocation(),
-        rows = useTasks(),
-        accounts = useAccounts(),
-        { me } = useSession()
-    const [creating, setCreating] = useState(false),
-        [filter, setFilter] = useState(''),
-        [preset, setPreset] = useState<{ steps: Step[]; title: string } | null>(null)
-    useEffect(() => {
-        if (location.state?.preset) {
-            setPreset(location.state.preset)
-            setCreating(true)
-            navigate(location.pathname, { replace: true, state: null })
-        }
-    }, [location, navigate])
+        rows = useTasks()
+    const [filter, setFilter] = useState('')
     const tasks = rows.data?.pages.flat() ?? [],
         shown = tasks.filter((t) => !filter || t.status === filter)
     return (
-        <>
-            <div className="page-title">
-                <div>
-                    <span className="eyebrow">YOUR FINANCIAL WORKSPACE</span>
-                    <h1>任务工作台</h1>
-                    <p>从一个目标开始，让每一步执行有据可查。</p>
-                </div>
-                <button
-                    className="primary"
-                    onClick={() => {
-                        setPreset(null)
-                        setCreating(true)
-                    }}
-                    disabled={!me?.scopes.includes('tasks.write')}
-                >
-                    <Plus size={17} />
-                    新建任务
-                </button>
+        <section className="task-rail" aria-label="任务历史">
+            <div className="rail-head">
+                <h2>
+                    我的任务 <span>{tasks.length}</span>
+                </h2>
+                <ListFilter size={16} />
             </div>
-            <div className="overview">
-                <div>
-                    <span className="overview-icon">
-                        <Wallet size={21} />
-                    </span>
-                    <div>
-                        <span className="muted">已加载账户余额</span>
-                        <strong>
-                            {accounts.data?.length === 1 ? (
-                                <Money value={accounts.data[0].balance_minor} />
-                            ) : accounts.data ? (
-                                `${accounts.data.length} 个账户`
-                            ) : (
-                                '—'
-                            )}
-                        </strong>
-                    </div>
-                </div>
-                <div>
-                    <span className="overview-icon amber">
-                        <Clock3 size={21} />
-                    </span>
-                    <div>
-                        <span className="muted">已加载任务 · 待处理</span>
-                        <strong>
-                            {
-                                tasks.filter((t) =>
-                                    [
-                                        'WAITING_APPROVAL',
-                                        'WAITING_CLARIFICATION',
-                                        'PLANNING',
-                                    ].includes(t.status),
-                                ).length
-                            }
-                            <small>项</small>
-                        </strong>
-                    </div>
-                </div>
-                <div>
-                    <span className="overview-icon">
-                        <ShieldCheck size={21} />
-                    </span>
-                    <div>
-                        <span className="muted">执行保护</span>
-                        <strong className="overview-caption">逐项确认 · 证据核实</strong>
-                    </div>
-                </div>
-            </div>
-            <div className={`workspace ${taskRef ? 'has-task' : ''}`}>
-                <section className="task-rail">
-                    <div className="rail-head">
-                        <h2>
-                            我的任务 <span>{tasks.length}</span>
-                        </h2>
-                        <ListFilter size={16} />
-                    </div>
-                    <label className="sr-only" htmlFor="task-filter">
-                        筛选已加载任务
-                    </label>
-                    <select
-                        id="task-filter"
-                        value={filter}
-                        onChange={(e) => setFilter(e.target.value)}
+            <label className="sr-only" htmlFor="task-filter">
+                筛选已加载任务
+            </label>
+            <select id="task-filter" value={filter} onChange={(e) => setFilter(e.target.value)}>
+                <option value="">全部已加载任务</option>
+                <option value="WAITING_APPROVAL">等待确认</option>
+                <option value="EXECUTING">正在执行</option>
+                <option value="COMPLETED">已标记完成</option>
+                <option value="WAITING_CLARIFICATION">需要补充信息</option>
+            </select>
+            <small className="rail-note">按引用分页，筛选仅限已加载记录</small>
+            <ErrorNotice error={rows.error} />
+            {rows.isLoading && <Loading />}
+            <div className="rail-items">
+                {shown.map((t) => (
+                    <Link
+                        to={'/tasks/' + t.task_ref}
+                        className={`task-item ${t.task_ref === taskRef ? 'selected' : ''}`}
+                        key={t.task_ref}
                     >
-                        <option value="">全部已加载任务</option>
-                        <option value="WAITING_APPROVAL">等待确认</option>
-                        <option value="EXECUTING">正在执行</option>
-                        <option value="COMPLETED">已标记完成</option>
-                        <option value="WAITING_CLARIFICATION">需要补充信息</option>
-                    </select>
-                    <small className="rail-note">按引用分页，筛选仅限已加载记录</small>
-                    <ErrorNotice error={rows.error} />
-                    {rows.isLoading && <Loading />}
-                    <div className="rail-items">
-                        {shown.map((t) => (
-                            <Link
-                                to={'/tasks/' + t.task_ref}
-                                className={`task-item ${t.task_ref === taskRef ? 'selected' : ''}`}
-                                key={t.task_ref}
-                            >
-                                <div>
-                                    <Badge status={t.status}>
-                                        {t.status === 'PLANNING' && t.current_version > 0
-                                            ? '计划已生成'
-                                            : t.status === 'COMPLETED'
-                                              ? '已标记完成'
-                                              : (taskLabels[t.status] ?? '暂无法识别')}
-                                    </Badge>
-                                    <ChevronRight size={15} />
-                                </div>
-                                <strong>{t.user_request}</strong>
-                                <small>{time(t.created_at)}</small>
-                            </Link>
-                        ))}
-                    </div>
-                    {!rows.isLoading && !tasks.length && (
-                        <p className="rail-note">尚无已加载任务</p>
-                    )}
-                    {rows.hasNextPage && (
-                        <button
-                            className="text-button"
-                            disabled={rows.isFetchingNextPage}
-                            onClick={() => void rows.fetchNextPage()}
-                        >
-                            加载更多
-                        </button>
-                    )}
-                </section>
-                {taskRef ? (
-                    <TaskDetail key={taskRef} reference={taskRef} />
-                ) : (
-                    <section className="welcome panel">
-                        <div className="welcome-symbol">
-                            <ShieldCheck size={46} strokeWidth={1.3} />
+                        <div>
+                            <Badge status={t.status}>
+                                {t.status === 'PLANNING' && t.current_version > 0
+                                    ? '计划已生成'
+                                    : t.status === 'COMPLETED'
+                                      ? '已标记完成'
+                                      : (taskLabels[t.status] ?? '暂无法识别')}
+                            </Badge>
+                            <ChevronRight size={15} />
                         </div>
-                        <span className="eyebrow">PLAN. CONFIRM. VERIFY.</span>
-                        <h2>今天想完成什么？</h2>
-                        <p>
-                            描述你的目标，或选择一个常用任务。
-                            <br />
-                            系统会先展示计划，资金操作由你逐项确认。
-                        </p>
-                        <div className="quick-cards">
-                            <button
-                                onClick={() => {
-                                    setPreset({
-                                        title: '查询当前余额',
-                                        steps: [
-                                            {
-                                                step_ref: 'balance',
-                                                action: 'accounts.balance',
-                                                arguments: {
-                                                    account_ref:
-                                                        accounts.data?.[0]?.account_ref ?? '',
-                                                },
-                                                depends_on: [],
-                                                funds_available_after: [],
-                                            },
-                                        ],
-                                    })
-                                    setCreating(true)
-                                }}
-                            >
-                                <Wallet size={23} />
-                                <strong>查询余额</strong>
-                                <span>获取当前账户余额</span>
-                                <ArrowRight size={16} />
-                            </button>
-                            <button
-                                onClick={() => {
-                                    setPreset(null)
-                                    setCreating(true)
-                                }}
-                            >
-                                <ArrowUpRight size={23} />
-                                <strong>智能转账</strong>
-                                <span>明确目标，确认后执行</span>
-                                <ArrowRight size={16} />
-                            </button>
-                            <button onClick={() => navigate('/accounts')}>
-                                <FileCheck2 size={23} />
-                                <strong>账单分析</strong>
-                                <span>查看支出、退款与分类</span>
-                                <ArrowRight size={16} />
-                            </button>
-                        </div>
-                        <div className="welcome-note">
-                            <ShieldCheck size={16} />
-                            金额和业务数据来自独立模拟银行
-                        </div>
-                    </section>
-                )}
+                        <strong>{t.user_request}</strong>
+                        <small>{time(t.created_at)}</small>
+                    </Link>
+                ))}
             </div>
-            {creating && <Composer preset={preset} onClose={() => setCreating(false)} />}
-        </>
+            {!rows.isLoading && !tasks.length && <p className="rail-note">尚无已加载任务</p>}
+            {rows.hasNextPage && (
+                <button
+                    className="text-button"
+                    disabled={rows.isFetchingNextPage}
+                    onClick={() => void rows.fetchNextPage()}
+                >
+                    加载更多
+                </button>
+            )}
+        </section>
+    )
+}
+export function TasksPage() {
+    const { taskRef } = useParams(),
+        location = useLocation(),
+        navigate = useNavigate()
+    const [preset, setPreset] = useState<{ steps: Step[]; title: string } | null>(null)
+    useEffect(() => {
+        if (location.state?.preset) {
+            setPreset(location.state.preset)
+            navigate(location.pathname, { replace: true, state: null })
+        }
+    }, [location, navigate])
+    return taskRef ? (
+        <TaskDetail key={taskRef} reference={taskRef} />
+    ) : (
+        <section className="goal-home">
+            <div className="goal-heading">
+                <span className="eyebrow">PLAN. CONFIRM. VERIFY.</span>
+                <h1>
+                    想完成
+                    <br />
+                    <em>什么？</em>
+                </h1>
+                <p>说出目标，查看计划，确认后执行。</p>
+                <div className="geometry" aria-hidden="true">
+                    <i />
+                    <b />
+                    <span />
+                </div>
+            </div>
+            <Composer
+                key={location.key + (preset?.title ?? 'new')}
+                preset={preset}
+                inline
+                onClose={() => setPreset(null)}
+            />
+        </section>
     )
 }
 
@@ -294,10 +174,12 @@ export function Composer({
     preset,
     onClose,
     task,
+    inline = false,
 }: {
     preset?: { steps: Step[]; title: string } | null
     onClose: () => void
     task?: Task
+    inline?: boolean
 }) {
     const { api } = useSession(),
         navigate = useNavigate(),
@@ -426,10 +308,29 @@ export function Composer({
             setBusy(false)
         }
     }
-    return (
-        <Modal title={task ? '补全或修改完整计划' : '新建金融任务'} onClose={onClose}>
+    const content = (
+        <>
             <form onSubmit={submit}>
                 <Notice>先生成计划。只读任务会查询执行；资金和服务变更需在预览后逐项确认。</Notice>
+                {inline && (
+                    <div className="goal-examples">
+                        {[
+                            '给小王转账 300 元，至少保留 1000 元',
+                            '查询上个月账单',
+                            '查询当前余额',
+                        ].map((example) => (
+                            <button
+                                type="button"
+                                className="secondary"
+                                key={example}
+                                disabled={busy || uncertain}
+                                onClick={() => setMessage(example)}
+                            >
+                                {example}
+                            </button>
+                        ))}
+                    </div>
+                )}
                 {!preset && (
                     <div className="segmented" aria-label="新建方式">
                         {[
@@ -464,7 +365,7 @@ export function Composer({
                             />
                         </Field>
                     )}
-                    {mode === 'natural' && (
+                    {mode === 'natural' && !inline && (
                         <div className="example-buttons">
                             {[
                                 '查一下余额',
@@ -620,9 +521,11 @@ export function Composer({
                     </Notice>
                 )}
                 <div className="actions">
-                    <button type="button" className="secondary" onClick={onClose}>
-                        返回
-                    </button>
+                    {!inline && (
+                        <button type="button" className="secondary" onClick={onClose}>
+                            返回
+                        </button>
+                    )}
                     <button
                         className="primary"
                         disabled={
@@ -643,6 +546,15 @@ export function Composer({
                     </button>
                 </div>
             </form>
+        </>
+    )
+    return inline ? (
+        <section className="goal-composer" aria-label="新建金融任务">
+            {content}
+        </section>
+    ) : (
+        <Modal title={task ? '补全或修改完整计划' : '新建金融任务'} onClose={onClose}>
+            {content}
         </Modal>
     )
 }
@@ -653,10 +565,17 @@ export function TaskDetail({ reference }: { reference: string }) {
         refresh = useRefresh(),
         navigate = useNavigate(),
         q = useQueryClient(),
+        [activityOpen, setActivityOpen] = useState(false),
+        [reportOpen, setReportOpen] = useState(false),
         [selection, setSelection] = useState(''),
         [editing, setEditing] = useState(false),
         [stopping, setStopping] = useState(false),
         [error, setError] = useState<unknown>()
+    const reportTrigger = useRef<HTMLButtonElement>(null),
+        closeReport = () => {
+            setReportOpen(false)
+            requestAnimationFrame(() => reportTrigger.current?.focus())
+        }
     const task = detail.data,
         ops = task ? activeOperations(task) : [],
         op =
@@ -665,6 +584,16 @@ export function TaskDetail({ reference }: { reference: string }) {
                 (o) => ['WAITING_APPROVAL', 'PREPARING'].includes(o.status) && isWrite(o.action),
             ) ??
             ops[0]
+    const activity = useQuery({
+        queryKey: [me?.subject_ref, 'task-activity', reference],
+        enabled: !!api && activityOpen,
+        queryFn: ({ signal }) =>
+            api!.get(
+                `/v1/tasks/${encodeURIComponent(reference)}/trace?limit=200&after=0`,
+                z.array(eventSchema),
+                signal,
+            ),
+    })
     const action = useMutation({
         mutationFn: async (kind: 'stop' | 'run' | 'followup' | 'export') => {
             if (!api || !task) return
@@ -723,12 +652,15 @@ export function TaskDetail({ reference }: { reference: string }) {
             </section>
         )
     return (
-        <div className="task-work">
+        <div className={`task-work ${reportOpen ? 'report-open' : ''}`}>
             <section className="task-main">
                 <div className="task-heading">
                     <div>
                         <span className="eyebrow">TASK / {reference.slice(-7).toUpperCase()}</span>
-                        <h2>{task.user_request}</h2>
+                        <div className="user-goal">
+                            <span>你的目标</span>
+                            <h2>{task.user_request}</h2>
+                        </div>
                         <div className="inline">
                             <Badge status={verified(task) ? 'success' : task.status}>
                                 {taskLabel(task)}
@@ -762,63 +694,83 @@ export function TaskDetail({ reference }: { reference: string }) {
                         </button>
                     </div>
                 )}
-                <div className="section-heading">
-                    <h3>计划与执行</h3>
-                    <span>{ops.length} 个业务操作</span>
-                </div>
-                <div className="plan-steps">
-                    {task.plans.at(-1)?.steps.map((step, index) => {
-                        const item = ops.find((o) => o.operation_ref === step.operation_ref)
-                        if (!item) return null
-                        return (
-                            <button
-                                key={item.operation_ref}
-                                className={`plan-step ${op?.operation_ref === item.operation_ref ? 'selected' : ''}`}
-                                onClick={() => setSelection(item.operation_ref)}
-                            >
-                                <span
-                                    className={`step-number ${item.status === 'SUCCEEDED' ? 'done' : ''}`}
+                <details className="plan-disclosure">
+                    <summary>查看计划 · {ops.length} 个业务操作</summary>
+                    <div className="section-heading">
+                        <h3>计划与执行</h3>
+                        <span>{ops.length} 个业务操作</span>
+                    </div>
+                    <div className="plan-steps">
+                        {task.plans.at(-1)?.steps.map((step, index) => {
+                            const item = ops.find((o) => o.operation_ref === step.operation_ref)
+                            if (!item) return null
+                            return (
+                                <button
+                                    key={item.operation_ref}
+                                    className={`plan-step ${op?.operation_ref === item.operation_ref ? 'selected' : ''}`}
+                                    onClick={() => setSelection(item.operation_ref)}
                                 >
-                                    {item.status === 'SUCCEEDED' ? (
-                                        <Check size={16} />
-                                    ) : (
-                                        String(index + 1).padStart(2, '0')
-                                    )}
-                                </span>
-                                <div>
-                                    <div className="step-title">
-                                        <strong>{actionName(item.action)}</strong>
-                                        <Badge status={item.status}>{operationLabel(item)}</Badge>
-                                    </div>
-                                    <p>
-                                        {isMinor(item.arguments.amount_minor) ? (
-                                            <Money value={item.arguments.amount_minor} />
+                                    <span
+                                        className={`step-number ${item.status === 'SUCCEEDED' ? 'done' : ''}`}
+                                    >
+                                        {item.status === 'SUCCEEDED' ? (
+                                            <Check size={16} />
                                         ) : (
-                                            text(
-                                                item.arguments.account_ref ??
-                                                    item.arguments.subscription_ref ??
-                                                    item.arguments.card_ref,
-                                                '查看操作详情',
-                                            )
+                                            String(index + 1).padStart(2, '0')
                                         )}
-                                    </p>
-                                    {step.depends_on.length > 0 && (
-                                        <small>
-                                            前置：{step.depends_on.join('、')}
-                                            {step.funds_available_after.length
-                                                ? ' · 需核实资金到账'
-                                                : ''}
-                                        </small>
-                                    )}
-                                    {item.error_code && (
-                                        <small className="error-code">{item.error_code}</small>
-                                    )}
-                                </div>
-                                <ChevronRight size={16} />
-                            </button>
-                        )
-                    })}
-                </div>
+                                    </span>
+                                    <div>
+                                        <div className="step-title">
+                                            <strong>{actionName(item.action)}</strong>
+                                            <Badge status={item.status}>
+                                                {operationLabel(item)}
+                                            </Badge>
+                                        </div>
+                                        <p>
+                                            {isMinor(item.arguments.amount_minor) ? (
+                                                <Money value={item.arguments.amount_minor} />
+                                            ) : (
+                                                text(
+                                                    item.arguments.account_ref ??
+                                                        item.arguments.subscription_ref ??
+                                                        item.arguments.card_ref,
+                                                    '查看操作详情',
+                                                )
+                                            )}
+                                        </p>
+                                        {step.depends_on.length > 0 && (
+                                            <small>
+                                                前置：{step.depends_on.join('、')}
+                                                {step.funds_available_after.length
+                                                    ? ' · 需核实资金到账'
+                                                    : ''}
+                                            </small>
+                                        )}
+                                        {item.error_code && (
+                                            <small className="error-code">{item.error_code}</small>
+                                        )}
+                                    </div>
+                                    <ChevronRight size={16} />
+                                </button>
+                            )
+                        })}
+                    </div>
+                </details>
+                {op && (
+                    <div className="inline-review">
+                        <span className="eyebrow">FinGuard · 当前行动</span>
+                        <OperationInspector key={op.operation_ref} task={task} op={op} />
+                    </div>
+                )}
+                {task.evidence.length > 0 && (
+                    <button
+                        ref={reportTrigger}
+                        className="primary"
+                        onClick={() => setReportOpen(true)}
+                    >
+                        打开报告与凭证
+                    </button>
+                )}
                 {!ops.length && task.status !== 'WAITING_CLARIFICATION' && (
                     <Empty title="尚无可展示的操作">请读取最新任务状态。</Empty>
                 )}
@@ -876,6 +828,27 @@ export function TaskDetail({ reference }: { reference: string }) {
                         </button>
                     )}
                 </div>
+                <details
+                    className="activity"
+                    onToggle={(e) => {
+                        const open = e.currentTarget.open
+                        setActivityOpen(open)
+                        if (open) void activity.refetch()
+                    }}
+                >
+                    <summary>查看执行过程</summary>
+                    <p className="muted">服务端记录 · 最多前 200 条；完整分页可进入诊断。</p>
+                    <ErrorNotice error={activity.error} />
+                    {activity.isFetching && <Loading />}
+                    <ol>
+                        {activity.data?.map((event) => (
+                            <li key={event.sequence}>
+                                <strong>{event.kind}</strong>
+                                <small> · {time(event.occurred_at)}</small>
+                            </li>
+                        ))}
+                    </ol>
+                </details>
                 <details className="detail-note">
                     <summary>任务关联与原始目标</summary>
                     <dl className="facts">
@@ -904,15 +877,53 @@ export function TaskDetail({ reference }: { reference: string }) {
                     )}
                 </div>
             </section>
-            <aside className="inspector">
-                {op ? (
-                    <OperationInspector task={task} op={op} />
-                ) : (
-                    <Panel title="执行检查区" tag="REVIEW">
-                        <Empty title="等待完整任务计划">确认参数和结果凭证会显示在这里。</Empty>
-                    </Panel>
-                )}
-            </aside>
+            {reportOpen && (
+                <aside className="report-panel" aria-label="报告与凭证">
+                    <div className="report-heading">
+                        <h2>报告与凭证</h2>
+                        <button className="secondary" onClick={closeReport}>
+                            关闭报告
+                        </button>
+                    </div>
+                    <p>任务：{task.user_request}</p>
+                    {ops
+                        .filter(
+                            (item) =>
+                                item.status === 'SUCCEEDED' &&
+                                task.evidence.some((e) => e.operation_ref === item.operation_ref),
+                        )
+                        .map((item) => (
+                            <section className="panel" key={item.operation_ref}>
+                                <h3>{actionName(item.action)}</h3>
+                                {isMinor(item.arguments.amount_minor) && (
+                                    <div className="report-amount">
+                                        <span>操作金额</span>
+                                        <Money value={item.arguments.amount_minor} large />
+                                    </div>
+                                )}
+                                <ResultSummary op={item} />
+                                <Raw title="业务结果" value={item.result} />
+                                {task.evidence
+                                    .filter((e) => e.operation_ref === item.operation_ref)
+                                    .map((e) => (
+                                        <dl className="facts" key={e.evidence_ref}>
+                                            <dt>证据编号</dt>
+                                            <dd>{e.evidence_ref}</dd>
+                                            <dt>来源</dt>
+                                            <dd>{e.source}</dd>
+                                            <dt>业务记录</dt>
+                                            <dd>{e.record_ref}</dd>
+                                        </dl>
+                                    ))}
+                            </section>
+                        ))}
+                    {!verified(task) && (
+                        <Notice kind="warning">
+                            任务尚未全部核实。这里只展示已有的已核实结果。
+                        </Notice>
+                    )}
+                </aside>
+            )}
             {editing && <Composer task={task} onClose={() => setEditing(false)} />}{' '}
             {stopping && (
                 <Confirm

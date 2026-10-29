@@ -139,7 +139,7 @@ uv build --all --no-sources --out-dir dist/python/0.3.0
 | [docs/decisions.md](docs/decisions.md) | 已采用的选型与代价 |
 | [docs/roadmap.md](docs/roadmap.md)、[docs/implementation-plan.md](docs/implementation-plan.md) | 当前阶段与剩余工作 |
 | [docs/frontend-design.md](docs/frontend-design.md)、[docs/frontend-validation.md](docs/frontend-validation.md) | 前端设计、实现范围、验证和剩余接口 |
-| [docs/frontend-redesign.md](docs/frontend-redesign.md) | 新版对话式任务与成果面板设计；Geometric Bold 风格，尚未实现 |
+| [docs/frontend-redesign.md](docs/frontend-redesign.md) | 新版对话式任务与成果面板设计；Geometric Bold 风格，已应用前端源码 |
 | [docs/integration-platform-plan.md](docs/integration-platform-plan.md) | 接口准备的范围与实施阶段 |
 | [docs/extension-interfaces.md](docs/extension-interfaces.md) | 已实现契约、本地校验 API 与开发说明 |
 | [docs/understanding-and-privacy.md](docs/understanding-and-privacy.md) | 输入完整性、账单区间、关联追问、分级验证与脱敏 |

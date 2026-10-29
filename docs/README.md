@@ -22,7 +22,7 @@
 | [开发路线](roadmap.md)、[实施计划](implementation-plan.md) | 当前进度与待完成事项 |
 | [架构](architecture.md)、[领域模型](domain-model.md)、[设计决策](decisions.md) | 控制边界、对象关系与技术取舍 |
 | [前端设计](frontend-design.md) | 页面、状态、确认和证据设计 |
-| [前端改版提案](frontend-redesign.md) | LibreChat 结构参考、Geometric Bold 风格及页面设计；尚未实现 |
+| [前端改版提案](frontend-redesign.md) | LibreChat 结构参考、Geometric Bold 风格及页面设计；已应用前端源码 |
 | [服务隔离](service-isolation.md) | 项目与模拟银行的目录、环境和进程边界 |
 | [扩展接口](extension-interfaces.md)、[接口准备规划](integration-platform-plan.md) | 银行、模型与插件契约及当前范围 |
 | [Agent 设计](deepseek-design.md) | DeepSeek 协议、循环预算和权限边界 |

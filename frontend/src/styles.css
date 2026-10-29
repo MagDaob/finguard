@@ -1,18 +1,18 @@
 :root {
     font-family: Inter, 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
-    color: #18232a;
-    background: #f5f7f8;
+    color: #000000;
+    background: #ffffff;
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
-    --bg: #f5f7f8;
-    --ink: #18232a;
-    --muted: #53636b;
-    --primary: #126b5b;
-    --primary-soft: #e9f3ef;
-    --line: #e1e8e6;
-    --amber: #88560b;
-    --red: #a43135;
+    --bg: #ffffff;
+    --ink: #000000;
+    --muted: #000000;
+    --primary: #000000;
+    --primary-soft: #ffffff;
+    --line: #ffffff;
+    --amber: #000000;
+    --red: #000000;
 }
 * {
     box-sizing: border-box;
@@ -52,7 +52,7 @@ a:hover {
 button:focus-visible,
 a:focus-visible,
 summary:focus-visible {
-    outline: 3px solid #73b8a7;
+    outline: 3px solid #000000;
     outline-offset: 3px;
 }
 h1,
@@ -100,21 +100,21 @@ pre {
         SFMono-Regular,
         Consolas,
         monospace;
-    background: #f6f8f8;
+    background: #ffffff;
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: 0;
     padding: 14px;
     max-height: 420px;
     overflow: auto;
-    color: #45545c;
+    color: #000000;
 }
 input,
 select,
 textarea {
     width: 100%;
     min-width: 0;
-    border: 1px solid #d3ddda;
-    border-radius: 8px;
+    border: 1px solid #ffffff;
+    border-radius: 0;
     background: white;
     padding: 11px 12px;
     color: var(--ink);
@@ -129,12 +129,12 @@ input:focus,
 select:focus,
 textarea:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px #126b5b15;
+    box-shadow: none;
 }
 input:disabled,
 textarea:disabled,
 select:disabled {
-    background: #f3f5f5;
+    background: #ffffff;
 }
 input[type='checkbox'] {
     width: 17px;
@@ -148,7 +148,7 @@ button {
     background: none;
     color: inherit;
     min-height: 44px;
-    border-radius: 8px;
+    border-radius: 0;
     font-weight: 550;
 }
 form > .primary {
@@ -174,14 +174,14 @@ form .notice {
     border: 1px solid var(--primary);
 }
 .primary:hover:not(:disabled) {
-    background: #0b584a;
+    background: #000000;
 }
 .secondary {
     background: white;
-    border: 1px solid #d7dfdc;
+    border: 1px solid #ffffff;
 }
 .secondary:hover:not(:disabled) {
-    background: #f3f7f5;
+    background: #ffffff;
 }
 .text-button {
     color: var(--primary);
@@ -227,18 +227,18 @@ form .notice {
     display: inline-flex;
     align-items: center;
     gap: 7px;
-    background: #eff5e7;
-    border: 1px solid #dde9c9;
-    color: #4f6338;
+    background: #ffffff;
+    border: 1px solid #ffffff;
+    color: #000000;
     padding: 4px 10px;
-    border-radius: 5px;
+    border-radius: 0;
     font-size: 12px;
     white-space: nowrap;
 }
 .status-dot {
     height: 6px;
     width: 6px;
-    border-radius: 50%;
+    border-radius: 0;
     background: currentColor;
     display: inline-block;
     flex-shrink: 0;
@@ -259,7 +259,7 @@ form .notice {
 .panel {
     background: white;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: 0;
     padding: 24px;
     min-width: 0;
 }
@@ -277,11 +277,11 @@ form .notice {
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    background: #f3f7f6;
-    border: 1px solid #e1e9e6;
-    color: #4d625a;
+    background: #ffffff;
+    border: 1px solid #ffffff;
+    color: #000000;
     padding: 12px 14px;
-    border-radius: 8px;
+    border-radius: 0;
     font-size: 12px;
     margin: 14px 0;
     overflow-wrap: anywhere;
@@ -298,40 +298,40 @@ form .notice {
     opacity: 0.85;
 }
 .notice.warning {
-    background: #fff9ed;
-    border-color: #f0e2c4;
-    color: #805919;
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #000000;
 }
 .notice.danger {
-    background: #fff1f0;
-    border-color: #efcfcd;
-    color: #983c3c;
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #000000;
 }
 .badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    border-radius: 5px;
+    border-radius: 0;
     padding: 3px 8px;
     font-size: 12px;
     line-height: 1.6;
     white-space: normal;
 }
 .badge.neutral {
-    background: #edf3f8;
-    color: #426581;
+    background: #ffffff;
+    color: #000000;
 }
 .badge.warning {
-    background: #fff3d8;
-    color: #815b14;
+    background: #ffffff;
+    color: #000000;
 }
 .badge.success {
-    background: #e7f3eb;
-    color: #276c47;
+    background: #ffffff;
+    color: #000000;
 }
 .badge.danger {
-    background: #fbeded;
-    color: #9f4141;
+    background: #ffffff;
+    color: #000000;
 }
 .money {
     font-variant-numeric: tabular-nums;
@@ -367,7 +367,7 @@ form .notice {
     margin: 10px 0 16px;
 }
 .updated.stale {
-    color: #92651a;
+    color: #000000;
 }
 .loading {
     display: flex;
@@ -403,9 +403,9 @@ form .notice {
     width: 56px;
     height: 56px;
     margin: auto;
-    background: #edf5f0;
-    border: 1px solid #dceae1;
-    border-radius: 14px;
+    background: #ffffff;
+    border: 1px solid #ffffff;
+    border-radius: 0;
     display: grid;
     place-items: center;
     color: var(--primary);
@@ -476,8 +476,8 @@ form .notice {
     display: flex;
     gap: 5px;
     padding: 4px;
-    background: #f2f5f4;
-    border-radius: 9px;
+    background: #ffffff;
+    border-radius: 0;
     margin-bottom: 20px;
     overflow: auto;
 }
@@ -490,7 +490,7 @@ form .notice {
 }
 .segmented .active {
     background: white;
-    box-shadow: 0 1px 5px #112e1d0a;
+    box-shadow: none;
     color: var(--primary);
 }
 .code-input {
@@ -536,16 +536,16 @@ form .notice {
 }
 .modal {
     border: 1px solid var(--line);
-    border-radius: 16px;
+    border-radius: 0;
     padding: 26px;
     width: min(700px, calc(100% - 24px));
     max-height: calc(100dvh - 40px);
     overflow: auto;
     color: var(--ink);
-    box-shadow: 0 24px 100px #16372e35;
+    box-shadow: none;
 }
 .modal::backdrop {
-    background: #102d284d;
+    background: #000000;
     backdrop-filter: blur(2px);
 }
 .modal-head {
@@ -595,7 +595,7 @@ form .notice {
     background: white;
     border: 1px solid var(--line);
     padding: 19px 22px;
-    border-radius: 11px;
+    border-radius: 0;
     min-width: 0;
 }
 .overview > div > div {
@@ -626,14 +626,14 @@ form .notice {
     height: 42px;
     display: grid;
     place-items: center;
-    background: #edf5ef;
+    background: #ffffff;
     color: var(--primary);
-    border-radius: 10px;
+    border-radius: 0;
     flex-shrink: 0;
 }
 .overview-icon.amber {
-    background: #fff7e9;
-    color: #9b742e;
+    background: #ffffff;
+    color: #000000;
 }
 .workspace {
     display: grid;
@@ -664,7 +664,7 @@ form .notice {
     font-size: 12px;
     padding: 8px;
     min-height: 36px;
-    background: #f7faf8;
+    background: #ffffff;
 }
 .rail-note {
     display: block;
@@ -679,19 +679,19 @@ form .notice {
 }
 .task-item {
     display: block;
-    background: #fff;
+    background: #ffffff;
     border: 1px solid var(--line);
-    border-radius: 9px;
+    border-radius: 0;
     padding: 13px;
     color: var(--ink);
 }
 .task-item:hover {
-    border-color: #9bbdad;
+    border-color: #000000;
 }
 .task-item.selected {
-    border-color: #78a995;
-    background: #f1f8f4;
-    box-shadow: inset 3px 0 var(--primary);
+    border-color: #000000;
+    background: #ffffff;
+    box-shadow: none;
 }
 .task-item > div {
     display: flex;
@@ -724,14 +724,14 @@ form .notice {
     padding: 38px 26px;
 }
 .welcome-symbol {
-    background: #edf5f0;
+    background: #ffffff;
     width: 86px;
     height: 86px;
     display: grid;
     place-items: center;
     color: var(--primary);
-    border-radius: 25px;
-    border: 1px solid #e0ece4;
+    border-radius: 0;
+    border: 1px solid #ffffff;
     margin-bottom: 25px;
 }
 .welcome h2 {
@@ -755,17 +755,17 @@ form .notice {
 .quick-cards button {
     position: relative;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: 0;
     text-align: left;
     padding: 19px 17px;
     display: flex;
     flex-direction: column;
     gap: 8px;
-    background: #fff;
+    background: #ffffff;
 }
 .quick-cards button:hover {
-    border-color: #80ac99;
-    background: #f9fcfa;
+    border-color: #000000;
+    background: #ffffff;
 }
 .quick-cards button > svg {
     color: var(--primary);
@@ -782,7 +782,7 @@ form .notice {
     position: absolute;
     right: 13px;
     top: 20px;
-    color: #8d9f96;
+    color: #000000;
 }
 .welcome-note {
     font-size: 12px;
@@ -800,9 +800,9 @@ form .notice {
 }
 .task-main {
     padding: 24px;
-    background: #fff;
+    background: #ffffff;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: 0;
     min-width: 0;
 }
 .task-heading {
@@ -841,29 +841,29 @@ form .notice {
     align-items: flex-start;
     text-align: left;
     border: 1px solid var(--line);
-    border-radius: 10px;
+    border-radius: 0;
     padding: 16px 13px;
-    background: #fff;
+    background: #ffffff;
 }
 .plan-step.selected {
-    border-color: #97bbac;
-    background: #f8fcfa;
+    border-color: #000000;
+    background: #ffffff;
 }
 .step-number {
     font-size: 12px;
-    border: 1px solid #dbe4de;
+    border: 1px solid #ffffff;
     background: white;
     color: var(--muted);
     width: 28px;
     height: 28px;
-    border-radius: 50%;
+    border-radius: 0;
     display: grid;
     place-items: center;
     flex-shrink: 0;
 }
 .step-number.done {
     background: var(--primary-soft);
-    border-color: #bbd8c5;
+    border-color: #ffffff;
     color: var(--primary);
 }
 .plan-step > div {
@@ -898,7 +898,7 @@ form .notice {
 }
 .plan-step > svg {
     margin-top: 7px;
-    color: #a2afa7;
+    color: #000000;
 }
 .task-actions {
     display: flex;
@@ -918,13 +918,13 @@ form .notice {
 }
 .clarification {
     padding: 18px;
-    background: #fff9ed;
-    border: 1px solid #f1e3c5;
-    border-radius: 10px;
+    background: #ffffff;
+    border: 1px solid #ffffff;
+    border-radius: 0;
     margin: 18px 0;
 }
 .clarification h3 {
-    color: #875e20;
+    color: #000000;
 }
 .clarification p {
     font-size: 12px;
@@ -933,10 +933,10 @@ form .notice {
 .result-banner {
     display: flex;
     gap: 13px;
-    background: #edf7ef;
-    color: #326744;
-    border: 1px solid #d4e7d9;
-    border-radius: 10px;
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #ffffff;
+    border-radius: 0;
     margin-top: 22px;
     padding: 18px;
 }
@@ -1040,7 +1040,7 @@ form .notice {
 }
 .proof-list details {
     border: 1px solid var(--line);
-    border-radius: 8px;
+    border-radius: 0;
     margin-top: 10px;
     padding: 10px;
     font-size: 12px;
@@ -1078,15 +1078,15 @@ form .notice {
     color: var(--muted);
 }
 .conflict {
-    border: 1px solid #e8d5b0;
-    background: #fffaf0;
+    border: 1px solid #ffffff;
+    background: #ffffff;
     padding: 12px;
-    border-radius: 8px;
+    border-radius: 0;
     margin-bottom: 16px;
 }
 .conflict h3 {
     font-size: 12px;
-    color: #825c21;
+    color: #000000;
 }
 .category-bars {
     margin: 16px 0;
@@ -1102,17 +1102,17 @@ form .notice {
 }
 .bar-track {
     height: 5px;
-    background: #edf1ef;
+    background: #ffffff;
     display: block;
-    border-radius: 4px;
+    border-radius: 0;
     margin-top: 6px;
     overflow: hidden;
 }
 .bar-track > span {
     display: block;
     height: 100%;
-    background: #6fa48a;
-    border-radius: 4px;
+    background: #000000;
+    border-radius: 0;
 }
 .business-grid {
     display: grid;
@@ -1129,7 +1129,7 @@ form .notice {
 .account-card {
     text-align: left;
     border: 1px solid var(--line);
-    border-radius: 12px;
+    border-radius: 0;
     background: white;
     padding: 24px;
     display: grid;
@@ -1137,8 +1137,8 @@ form .notice {
     min-height: 200px;
 }
 .account-card.selected {
-    border-color: #97bbab;
-    box-shadow: inset 0 3px var(--primary);
+    border-color: #000000;
+    box-shadow: none;
 }
 .account-card > div {
     display: flex;
@@ -1186,11 +1186,11 @@ form .notice {
 .ledger-icon {
     width: 32px;
     height: 32px;
-    background: #edf5f0;
+    background: #ffffff;
     display: grid;
     place-items: center;
     color: var(--primary);
-    border-radius: 8px;
+    border-radius: 0;
 }
 .product-grid,
 .delegations {
@@ -1276,7 +1276,7 @@ form .notice {
     place-items: center;
     background: var(--primary-soft);
     color: var(--primary);
-    border-radius: 50%;
+    border-radius: 0;
     font-size: 12px;
     flex-shrink: 0;
 }
@@ -1464,7 +1464,7 @@ form .notice {
     .welcome-symbol {
         height: 68px;
         width: 68px;
-        border-radius: 20px;
+        border-radius: 0;
     }
     .business-grid,
     .product-grid,
@@ -1569,6 +1569,6 @@ form .notice {
 .preset-summary > div {
     border: 1px solid var(--line);
     padding: 16px;
-    border-radius: 9px;
+    border-radius: 0;
     margin-bottom: 12px;
 }

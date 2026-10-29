@@ -264,3 +264,17 @@ it('retains the identical request identity and payload after a lost creation res
     expect(writes).toHaveLength(2)
     expect(writes[0].body).toEqual(writes[1].body)
 })
+
+it('keeps confirmation inline and opens only evidence-backed results in a dismissible panel', async () => {
+    setup()
+    mount(<TaskDetail reference="task-fixture" />)
+    expect(screen.queryByRole('complementary', { name: '报告与凭证' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '打开报告与凭证' })).not.toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('button', { name: '确认转账 ¥300.00' }))
+    const open = await screen.findByRole('button', { name: '打开报告与凭证' })
+    await userEvent.click(open)
+    expect(screen.getByRole('complementary', { name: '报告与凭证' })).toHaveTextContent('转账')
+    await userEvent.click(screen.getByRole('button', { name: '关闭报告' }))
+    expect(screen.queryByRole('complementary', { name: '报告与凭证' })).not.toBeInTheDocument()
+    await waitFor(() => expect(open).toHaveFocus())
+})

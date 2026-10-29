@@ -1,0 +1,425 @@
+:root {
+    color-scheme: light;
+    --bg: #fff;
+    --ink: #000;
+    --muted: #000;
+    --primary: #00f;
+    --primary-soft: #fff;
+    --line: #000;
+    --amber: #000;
+    --red: #000;
+    color: #000;
+    background: #fff;
+}
+body {
+    background: #fff;
+    color: #000;
+}
+h1,
+h2,
+h3 {
+    font-weight: 900;
+}
+button,
+input,
+textarea,
+select,
+.panel,
+.notice,
+.badge,
+.modal,
+.task-item,
+.plan-step,
+.segmented,
+.segmented button,
+.empty-icon,
+.section-symbol,
+.overview-icon,
+.welcome-symbol,
+.bar-track,
+.bar-track span {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+button {
+    min-height: 44px;
+}
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+    outline: 3px solid #00f;
+    outline-offset: 3px;
+}
+.primary {
+    background: #00f;
+    color: #fff;
+    border: 3px solid #00f;
+}
+.primary:hover {
+    background: #000;
+    border-color: #000;
+}
+.secondary {
+    background: #fff;
+    color: #000;
+    border: 3px solid #000;
+}
+.panel {
+    border: 3px solid #000;
+    background: #fff;
+}
+.notice,
+.notice.warning,
+.notice.danger {
+    background: #ff0;
+    color: #000;
+    border: 2px solid #000;
+}
+.badge,
+.badge.neutral,
+.badge.success,
+.badge.danger,
+.badge.warning {
+    background: #fff;
+    color: #000;
+    border: 1px solid #000;
+}
+.status-dot {
+    background: currentColor;
+}
+.environment {
+    background: #fff;
+    color: #000;
+    border: 2px solid #000;
+}
+.segmented button.active {
+    background: #000;
+    color: #fff;
+}
+.money {
+    color: #000;
+    font-variant-numeric: tabular-nums;
+}
+.money.large {
+    font-size: 36px;
+    font-weight: 900;
+}
+.bar-track {
+    background: #fff;
+    border: 1px solid #000;
+}
+.bar-track span {
+    background: #00f;
+}
+.goal-home {
+    max-width: 860px;
+    margin: 24px auto;
+}
+.goal-heading {
+    position: relative;
+    padding: 24px 0 40px;
+}
+.goal-heading h1 {
+    font-size: 72px;
+    line-height: 1.05;
+    letter-spacing: -3px;
+    margin: 16px 0;
+}
+.goal-heading em {
+    font-style: normal;
+    color: #00f;
+}
+.goal-heading p {
+    font-size: 16px;
+}
+.geometry {
+    position: absolute;
+    right: 10%;
+    top: 30px;
+    width: 150px;
+    height: 170px;
+    pointer-events: none;
+}
+.geometry i {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    border-radius: 100%;
+    background: #00f;
+    right: 0;
+}
+.geometry b {
+    position: absolute;
+    width: 65px;
+    height: 65px;
+    background: #ff0;
+    border: 3px solid #000;
+    transform: rotate(-15deg);
+    left: 0;
+    bottom: 0;
+}
+.geometry span {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    border-left: 28px solid transparent;
+    border-right: 28px solid transparent;
+    border-bottom: 52px solid #000;
+}
+.goal-composer {
+    border: 4px solid #000;
+    padding: 24px;
+}
+.goal-composer textarea {
+    min-height: 110px;
+    border: 2px solid #000;
+}
+.goal-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+.goal-examples button {
+    font-size: 12px;
+}
+.task-rail {
+    background: #000 !important;
+    border: 0 !important;
+    padding: 0 !important;
+    min-width: 0;
+}
+.task-rail h2,
+.task-rail .muted,
+.task-rail .rail-note {
+    color: #fff;
+}
+.task-rail .rail-items {
+    max-height: none;
+}
+.task-rail select {
+    width: 100%;
+    background: #fff;
+    color: #000;
+}
+.task-rail .task-item {
+    background: #000;
+    border: 0;
+    border-bottom: 1px solid #fff;
+    color: #fff;
+    padding: 16px 4px;
+}
+.task-rail .task-item.selected {
+    background: #00f;
+}
+.task-rail .badge {
+    background: transparent;
+    color: #fff;
+    border: 0;
+    padding: 0;
+}
+.task-rail small {
+    color: #fff;
+}
+.task-rail .rail-head {
+    padding: 0;
+    margin-bottom: 16px;
+}
+.task-work {
+    display: block;
+    min-width: 0;
+}
+.task-main {
+    max-width: 780px;
+    margin: auto;
+    background: #fff;
+    border: 0;
+    padding: 0;
+    min-width: 0;
+}
+.user-goal {
+    background: #ff0;
+    border: 2px solid #000;
+    padding: 20px;
+    margin-bottom: 16px;
+}
+.user-goal > span {
+    font-size: 12px;
+}
+.user-goal h2 {
+    font-size: 18px;
+}
+.plan-disclosure {
+    margin: 24px 0;
+    border-top: 2px solid #000;
+    padding-top: 16px;
+}
+.plan-disclosure summary {
+    cursor: pointer;
+    font-weight: 800;
+    min-height: 44px;
+}
+.plan-step {
+    background: #fff;
+    border: 2px solid #000;
+}
+.plan-step.selected {
+    border-color: #00f;
+    background: #fff;
+}
+.step-number,
+.step-number.done {
+    background: #00f;
+    color: #fff;
+    border-radius: 0;
+}
+.inline-review {
+    margin: 24px 0;
+}
+.inline-review > .eyebrow {
+    display: block;
+    color: #00f;
+    margin-bottom: 12px;
+}
+.result-banner {
+    background: #ff0;
+    color: #000;
+    border: 2px solid #000;
+}
+.task-work.report-open {
+    display: grid;
+    grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
+    gap: 24px;
+}
+.report-panel {
+    min-width: 0;
+    border: 4px solid #000;
+    padding: 24px;
+    align-self: start;
+    overflow-wrap: anywhere;
+}
+.report-heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+}
+.report-panel > .panel {
+    margin-top: 24px;
+    padding: 16px;
+}
+.task-heading {
+    align-items: flex-start;
+}
+.task-heading > div {
+    min-width: 0;
+    flex: 1;
+}
+.task-actions {
+    flex-wrap: wrap;
+}
+.facts dd {
+    overflow-wrap: anywhere;
+}
+input,
+textarea,
+select {
+    max-width: 100%;
+}
+.modal {
+    border: 4px solid #000;
+    background: #fff;
+}
+.goal-composer .notice {
+    margin-bottom: 16px;
+}
+@media (max-width: 960px) {
+    .task-work.report-open {
+        display: block;
+    }
+    .report-open > .task-main {
+        display: none;
+    }
+    .goal-heading h1 {
+        font-size: 60px;
+    }
+    .geometry {
+        right: 0;
+        transform: scale(0.8);
+    }
+}
+@media (max-width: 600px) {
+    .goal-home {
+        margin: 0;
+    }
+    .goal-heading {
+        padding-top: 16px;
+    }
+    .goal-heading h1 {
+        font-size: 52px;
+    }
+    .geometry {
+        transform: scale(0.6);
+        transform-origin: right top;
+        right: 0;
+    }
+    .goal-composer {
+        padding: 16px;
+    }
+    .report-panel {
+        padding: 16px;
+    }
+    .report-heading {
+        flex-wrap: wrap;
+    }
+    .money.large {
+        font-size: 30px;
+    }
+    .task-heading {
+        flex-wrap: wrap;
+    }
+    .task-work,
+    .task-main {
+        width: 100%;
+    }
+    .goal-examples {
+        display: grid;
+    }
+    .user-goal {
+        padding: 16px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+.task-rail .task-item:hover {
+    background: #0000ff;
+}
+.report-amount {
+    display: grid;
+    margin: 24px 0;
+    gap: 8px;
+}
+.activity {
+    margin-top: 24px;
+    border-top: 2px solid #000;
+    padding-top: 16px;
+}
+.activity summary {
+    cursor: pointer;
+    min-height: 44px;
+    font-weight: 800;
+}
+.activity li {
+    overflow-wrap: anywhere;
+}
