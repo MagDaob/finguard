@@ -101,3 +101,11 @@ Windows 工作流只上传上述附件集合，保留 14 天。它不会上传�
 本次旧 Python 构建和桌面测试目录保存在 `artifacts/archive/release-preparation-2026-10-27/`。本机 `archive-map.local.json` 记录原路径与归档位置。此前的 Windows ZIP 另存为许可更新前的快照；当前桌面入口继续保留。
 
 归档仅改变工作区内的历史文件位置。正在使用的开发数据库、独立服务环境、配置和桌面用户数据不在归档范围内。后续清理档案时应先核对内容和所有权，不按模糊目录名批量删除。
+
+### 2026 年 10 月 29 日清理记录
+
+旧归档已压缩为本机 `artifacts/archive/release-preparation-2026-10-27-compressed-20261029.zip`。共 16,766 个文件，逐文件 SHA-256 校验通过后才移除展开副本。原目录保留 `archive-map.local.json`，另加 `CONTENT-ARCHIVED.local.json` 指向压缩归档；ZIP 内路径相对于工作区根目录，恢复时可还原原有归档位置。
+
+同时清理 PyInstaller 中间缓存、预览版后端重复副本、一次性 wheel 验收环境、Python 与前端缓存。临时脚本、旧日志和界面验收文件先压缩到本机 `artifacts/cleanup-20261029/temporary-scripts-and-qa.zip`，再移除展开文件。清理结果与校验明细保存在该目录的本机 JSON 记录中。
+
+本次共移除 19,406 个展开文件。保留压缩归档及校验记录后，净释放约 850 MB。源码、开发和构建环境、当前数据库、配置、可运行的桌面程序与预览目录、发布附件及参赛交付文件均保留。未修改用户目录内的数据，也未清空业务数据库。
