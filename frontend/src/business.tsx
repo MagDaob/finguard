@@ -29,6 +29,7 @@ import { decimal, isMinor, remaining, yuan } from './money'
 import { useAccounts, useRecipients, useRefresh } from './hooks'
 import { useSession } from './session'
 import { Composer } from './tasks'
+import { BankWallet } from './wallet'
 import {
     Badge,
     Confirm,
@@ -393,6 +394,7 @@ export function ServicesPage() {
                     <p>服务状态来自模拟银行，变更仍需生成任务并确认。</p>
                 </div>
             </div>
+            <BankWallet />
             <ErrorNotice error={cards.error ?? subscriptions.error} />
             <div className="business-grid">
                 <Panel title="卡片管理" tag="TEMPORARY LOCK">

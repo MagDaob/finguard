@@ -439,3 +439,104 @@ def test_conversation_serialization_and_read_scope(client):
         == 403
     )
     assert client.get("/v1/conversations?before=chat-locked").json() == []
+
+
+def test_wallet_connect_import_sync_and_disconnect(client):
+    banks = client.get("/v1/wallet/banks").json()
+    assert [b["bank_ref"] for b in banks] == ["simulated-bank"]
+    assert client.get("/v1/wallet").json()["assets"] == []
+    request = {"request_ref": "wallet-one", "bank_ref": "simulated-bank"}
+    connected = client.post("/v1/wallet/connections", json=request)
+    assert connected.status_code == 200, connected.text
+    ref = connected.json()["connection_ref"]
+    assert client.post("/v1/wallet/connections", json=request).json()["connection_ref"] == ref
+    assert (
+        client.post(
+            "/v1/wallet/connections", json={**request, "request_ref": "wallet-two"}
+        ).status_code
+        == 409
+    )
+    available = client.get(f"/v1/wallet/connections/{ref}/assets").json()
+    assert {a["kind"] for a in available} == {"card", "account"}
+    body = {"asset_refs": [a["asset_ref"] for a in available]}
+    imported = client.post(f"/v1/wallet/connections/{ref}/import", json=body)
+    assert imported.status_code == 200, imported.text
+    assets = imported.json()["assets"]
+    assert len(assets) == len(available)
+    assert client.post(f"/v1/wallet/connections/{ref}/import", json=body).json()["assets"][0][
+        "asset_ref"
+    ] in {a["asset_ref"] for a in assets}
+    assert len(client.get("/v1/wallet").json()["assets"]) == len(available)
+    assert client.post(f"/v1/wallet/connections/{ref}/sync").status_code == 200
+    assert (
+        client.post(
+            f"/v1/wallet/connections/{ref}/import", json={"asset_refs": ["account:not-owned"]}
+        ).status_code
+        == 422
+    )
+    assert client.post(f"/v1/wallet/connections/{ref}/disconnect").json()["assets"] == []
+    assert client.post(f"/v1/wallet/connections/{ref}/disconnect").status_code == 200
+    assert client.get(f"/v1/wallet/connections/{ref}/assets").status_code == 409
+    assert client.post("/v1/wallet/connections", json=request).status_code == 409
+
+
+def test_wallet_rejects_unconfigured_bank_and_cross_owner(client):
+    assert (
+        client.post(
+            "/v1/wallet/connections", json={"request_ref": "bad", "bank_ref": "cmb"}
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            "/v1/wallet/connections",
+            json={
+                "request_ref": "bad",
+                "bank_ref": "simulated-bank",
+                "url": "https://evil.example",
+            },
+        ).status_code
+        == 422
+    )
+    ref = client.post(
+        "/v1/wallet/connections",
+        json={"request_ref": "wallet-private", "bank_ref": "simulated-bank"},
+    ).json()["connection_ref"]
+    security = client.app.state.backend.security
+    security.provision("wallet-other", "Other")
+    headers = {"Authorization": "Bearer " + security.issue_token("wallet-other")}
+    assert client.get(f"/v1/wallet/connections/{ref}/assets", headers=headers).status_code == 404
+    assert client.post(f"/v1/wallet/connections/{ref}/sync", headers=headers).status_code == 404
+    assert (
+        client.post(f"/v1/wallet/connections/{ref}/disconnect", headers=headers).status_code == 404
+    )
+    assert client.get("/v1/wallet", headers=headers).json()["connections"] == []
+    headers = {
+        "Authorization": "Bearer "
+        + security.issue_token("user-demo-001", ("accounts.read", "services.read"))
+    }
+    assert (
+        client.post(
+            "/v1/wallet/connections",
+            json={"request_ref": "no-write", "bank_ref": "simulated-bank"},
+            headers=headers,
+        ).status_code
+        == 403
+    )
+
+
+def test_wallet_bank_failure_does_not_create_connection(client, monkeypatch):
+    from finguard.backend.errors import ServiceError
+
+    def unavailable(*args):
+        raise ServiceError("BANK_UNAVAILABLE", "Bank unavailable", 503)
+
+    monkeypatch.setattr(client.app.state.backend.bank, "list_accounts", unavailable)
+    assert (
+        client.post(
+            "/v1/wallet/connections",
+            json={"request_ref": "wallet-failed", "bank_ref": "simulated-bank"},
+        ).status_code
+        == 503
+    )
+    assert client.get("/v1/wallet").json()["connections"] == []

@@ -38,6 +38,13 @@ from finguard.backend.privacy import POLICY as REDACTION_POLICY
 from finguard.backend.privacy import redact
 from finguard.backend.security import Actor
 from finguard.backend.service import Backend
+from finguard.backend.wallet import (
+    ConnectRequest,
+    EnrollmentBank,
+    ImportRequest,
+    SimulationEnrollment,
+    Wallet,
+)
 from finguard.domain.values import Reference
 
 logger = logging.getLogger("finguard")
@@ -238,6 +245,51 @@ def create_app(settings: Settings | None = None, planner=None, *, bank=None) -> 
     def recipients(actor: Actor = actor_dependency):
         backend.security.require_scope(actor, "accounts.read")
         return backend.bank.list_recipients(actor.subject_ref)
+
+    wallet = Wallet(
+        backend,
+        (
+            EnrollmentBank(
+                "simulated-bank",
+                "FinGuard 模拟银行",
+                settings.bank_provider,
+                "simulation",
+                SimulationEnrollment(bank),
+            ),
+        )
+        if settings.bank_provider == "simulated-bank" and settings.bank_environment == "simulation"
+        else (),
+    )
+
+    @app.get("/v1/wallet/banks", tags=["business"])
+    def wallet_banks(actor: Actor = actor_dependency):
+        return wallet.catalog(actor)
+
+    @app.get("/v1/wallet", tags=["business"])
+    def wallet_get(actor: Actor = actor_dependency):
+        return wallet.snapshot(actor)
+
+    @app.post("/v1/wallet/connections", tags=["business"])
+    def wallet_connect(request: ConnectRequest, actor: Actor = actor_dependency):
+        return wallet.connect(actor, request)
+
+    @app.get("/v1/wallet/connections/{connection_ref}/assets", tags=["business"])
+    def wallet_available(connection_ref: Reference, actor: Actor = actor_dependency):
+        return wallet.available(actor, connection_ref)
+
+    @app.post("/v1/wallet/connections/{connection_ref}/import", tags=["business"])
+    def wallet_import(
+        connection_ref: Reference, request: ImportRequest, actor: Actor = actor_dependency
+    ):
+        return wallet.import_assets(actor, connection_ref, request)
+
+    @app.post("/v1/wallet/connections/{connection_ref}/sync", tags=["business"])
+    def wallet_sync(connection_ref: Reference, actor: Actor = actor_dependency):
+        return wallet.sync(actor, connection_ref)
+
+    @app.post("/v1/wallet/connections/{connection_ref}/disconnect", tags=["business"])
+    def wallet_disconnect(connection_ref: Reference, actor: Actor = actor_dependency):
+        return wallet.disconnect(actor, connection_ref)
 
     @app.get("/v1/cards", tags=["business"])
     def cards(actor: Actor = actor_dependency):

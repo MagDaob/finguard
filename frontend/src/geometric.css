@@ -613,3 +613,25 @@ select {
     bottom: 12px;
     z-index: 10;
 }
+
+.wallet-bank {
+    border-top: 2px solid #000;
+    margin-top: 24px;
+    padding-top: 24px;
+    overflow-wrap: anywhere;
+}
+.wallet-assets {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    gap: 16px;
+    margin: 16px 0;
+}
+.wallet-asset {
+    display: grid;
+    gap: 8px;
+    border: 2px solid #000;
+    padding: 16px;
+}
+.wallet-bank > .actions {
+    flex-wrap: wrap;
+}
