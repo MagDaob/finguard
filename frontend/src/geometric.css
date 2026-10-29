@@ -423,3 +423,55 @@ select {
 .activity li {
     overflow-wrap: anywhere;
 }
+
+.settings-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+}
+.settings-tabs a {
+    padding: 10px 16px;
+    min-height: 44px;
+    border: 2px solid #000;
+    color: #000;
+    font-weight: 800;
+}
+.settings-tabs a[aria-current='page'] {
+    background: #00f;
+    color: #fff;
+}
+.settings-tabs ~ .panel {
+    margin-bottom: 24px;
+}
+.settings-tabs ~ .panel > .check {
+    margin: 20px 0;
+}
+:root[data-large-text='true'] body {
+    font-size: 16px;
+}
+:root[data-large-text='true'] small {
+    font-size: 14px;
+}
+:root[data-large-text='true'] input,
+:root[data-large-text='true'] textarea,
+:root[data-large-text='true'] select {
+    font-size: 16px;
+}
+:root[data-compact='true'] .panel {
+    padding: 16px;
+}
+:root[data-compact='true'] .task-item {
+    padding-top: 8px;
+    padding-bottom: 8px;
+}
+:root[data-compact='true'] .plan-step {
+    padding: 10px;
+}
+:root[data-reduce-motion='true'] *,
+:root[data-reduce-motion='true'] *::before,
+:root[data-reduce-motion='true'] *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+}

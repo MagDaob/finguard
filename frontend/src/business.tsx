@@ -105,7 +105,7 @@ export function AccountsPage() {
             <div className="page-title">
                 <div>
                     <span className="eyebrow">ACCOUNTS & STATEMENTS</span>
-                    <h1>账户与账单</h1>
+                    <h1>账单明细</h1>
                     <p>当前余额与已入账流水，分别读取、清楚呈现。</p>
                 </div>
                 <button
@@ -389,7 +389,7 @@ export function ServicesPage() {
             <div className="page-title">
                 <div>
                     <span className="eyebrow">CARDS & SUBSCRIPTIONS</span>
-                    <h1>卡片与订阅</h1>
+                    <h1>卡包</h1>
                     <p>服务状态来自模拟银行，变更仍需生成任务并确认。</p>
                 </div>
             </div>

@@ -1,12 +1,10 @@
 import { lazy, Suspense, useEffect, useState, type FormEvent } from 'react'
 import { NavLink, Navigate, Route, Routes, useNavigate, useLocation } from 'react-router-dom'
 import {
-    Beaker,
     ChevronRight,
     CircleUserRound,
     CreditCard,
     FolderKanban,
-    Landmark,
     PlugZap,
     ShieldCheck,
     Wallet,
@@ -17,6 +15,7 @@ import { ErrorNotice, Field, Loading } from './ui'
 import { desktopSession, useDesktop } from './desktop'
 import { TasksPage, TaskHistory } from './tasks'
 import styles from './App.module.css'
+import { usePreferences } from './preferences'
 
 const AccountsPage = lazy(() => import('./business').then((m) => ({ default: m.AccountsPage })))
 const AuthorizationsPage = lazy(() =>
@@ -125,18 +124,16 @@ function Login() {
     )
 }
 export default function App() {
+    usePreferences()
     const { me, epoch } = useSession()
     const [menuOpen, setMenuOpen] = useState(false)
     const location = useLocation()
     useEffect(() => setMenuOpen(false), [location.pathname])
     const links = [
-        ['/tasks', '任务工作台', FolderKanban],
-        ['/accounts', '账户与账单', Wallet],
-        ['/authorizations', '授权管理', ShieldCheck],
-        ['/products', '产品与持仓', Landmark],
-        ['/services', '卡片与订阅', CreditCard],
-        ...(me?.scopes.includes('evaluation.manage') ? [['/lab', '调试与评估', Beaker]] : []),
-        ['/settings', '连接与设置', PlugZap],
+        ['/tasks', '任务', FolderKanban],
+        ['/accounts', '账单明细', Wallet],
+        ['/services', '卡包', CreditCard],
+        ['/settings', '设置', PlugZap],
     ] as const
     return (
         <div className={styles.shell}>
@@ -174,32 +171,26 @@ export default function App() {
             ) : (
                 <>
                     <aside className={`${styles.sidebar} ${menuOpen ? styles.open : ''}`}>
-                        <NavLink className={styles.newTask} to="/tasks">
-                            ＋ 新建任务
-                        </NavLink>
-                        <Routes>
-                            <Route path="/tasks/:taskRef?" element={<TaskHistory />} />
-                            <Route path="*" element={<TaskHistory />} />
-                        </Routes>
-                        <details className={styles.resources}>
-                            <summary>资金、授权与设置</summary>
-                            <nav aria-label="主导航" className={styles.nav}>
-                                {links.map(([to, title, Icon]) => (
-                                    <NavLink key={String(to)} to={String(to)}>
-                                        <Icon size={19} />
-                                        <span>{String(title)}</span>
-                                    </NavLink>
-                                ))}
-                            </nav>
-                        </details>
+                        <nav aria-label="主导航" className={styles.nav}>
+                            {links.map(([to, title, Icon]) => (
+                                <NavLink key={to} to={to}>
+                                    <Icon size={19} />
+                                    <span>{title}</span>
+                                </NavLink>
+                            ))}
+                        </nav>
+                        {location.pathname.startsWith('/tasks') && (
+                            <>
+                                <NavLink className={styles.newTask} to="/tasks">
+                                    ＋ 新建任务
+                                </NavLink>
+                                <Routes>
+                                    <Route path="/tasks/:taskRef?" element={<TaskHistory />} />
+                                </Routes>
+                            </>
+                        )}
                         <div className={styles.footnote}>
-                            <ShieldCheck size={17} />
-                            <br />
-                            模型负责规划
-                            <br />
-                            服务端控制执行
-                            <br />
-                            业务证据核实结果
+                            <span className="status-dot" /> 模拟环境
                         </div>
                     </aside>
                     <main className={styles.main} key={epoch}>
@@ -210,6 +201,10 @@ export default function App() {
                                 <Route path="/authorizations" element={<AuthorizationsPage />} />
                                 <Route path="/products" element={<ProductsPage />} />
                                 <Route path="/services" element={<ServicesPage />} />
+                                <Route
+                                    path="/settings"
+                                    element={<Navigate to="/settings/model" replace />}
+                                />
                                 <Route path="/settings/*" element={<SettingsPage />} />
                                 <Route path="/lab/*" element={<LabPage />} />
                                 <Route path="*" element={<Navigate to="/tasks" replace />} />
