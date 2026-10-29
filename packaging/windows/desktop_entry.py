@@ -34,6 +34,49 @@ def self_test(bundle, data, report_path):
         token = runtime.session()
         accounts = runtime.request("/v1/accounts", token=token)
         before = accounts[0]["balance_minor"]
+        assert not runtime.request("/v1/chat/status", token=token)["enabled"]
+        conversation = "desktop-chat-" + uuid4().hex
+        chat_body = {"message_ref": "message-one", "content": "你好", "expected_sequence": 0}
+        reply = runtime.request(f"/v1/conversations/{conversation}/messages", chat_body, token)
+        for _ in range(40):
+            reply = runtime.request(f"/v1/conversations/{conversation}", token=token)
+            if reply["turns"][0]["ready"]:
+                break
+            time.sleep(0.25)
+        assert (
+            reply["turns"][0]["task_ref"] is None
+            and reply["turns"][0]["error_code"] == "CHAT_NOT_CONFIGURED"
+        )
+        assert runtime.request("/v1/task-groups/counts", token=token)["all"] == 0
+        report["checks"].append("chat_without_task_and_no_model")
+        draft = runtime.request(
+            f"/v1/conversations/{conversation}/messages",
+            {
+                "message_ref": "message-two",
+                "content": "给小王转账，至少保留1000元",
+                "expected_sequence": 1,
+            },
+            token,
+        )
+        assert draft["turns"][-1]["kind"] == "draft" and draft["turns"][-1]["task_ref"] is None
+        assert runtime.request("/v1/task-groups/counts", token=token)["all"] == 0
+        report["checks"].append("clarification_without_task")
+        banks = runtime.request("/v1/wallet/banks", token=token)
+        assert len(banks) == 1 and banks[0]["bank_ref"] == "simulated-bank"
+        connection = runtime.request(
+            "/v1/wallet/connections",
+            {"request_ref": "desktop-wallet", "bank_ref": banks[0]["bank_ref"]},
+            token,
+        )
+        assets = runtime.request(
+            f"/v1/wallet/connections/{connection['connection_ref']}/assets", token=token
+        )
+        imported = runtime.request(
+            f"/v1/wallet/connections/{connection['connection_ref']}/import",
+            {"asset_refs": [a["asset_ref"] for a in assets]},
+            token,
+        )
+        assert len(imported["assets"]) == len(assets) > 0
         body = {
             "client_request_ref": "desktop-test-" + uuid4().hex,
             "user_request": "给小王转300元，至少保留1000元",
@@ -62,6 +105,10 @@ def self_test(bundle, data, report_path):
         report["checks"].extend(
             ["confirmed_transfer_evidence", "stable_request_and_no_double_debit"]
         )
+        counts = runtime.request("/v1/task-groups/counts", token=token)
+        assert counts["completed"] == 1 and counts["all"] == 1
+        assert len(runtime.request("/v1/task-groups/completed", token=token)) == 1
+        report["checks"].append("classified_task_counts")
         try:
             Runtime(bundle, data)
         except StartupError:
@@ -79,6 +126,9 @@ def self_test(bundle, data, report_path):
         assert resumed.request("/v1/accounts", token=token)[0]["balance_minor"] == before - 30000
         assert resumed.request(f"/v1/tasks/{task['task_ref']}", token=token)["verified_success"]
         report["checks"].append("restart_preserves_balance_and_evidence")
+        assert len(resumed.request("/v1/wallet", token=token)["assets"]) == len(assets)
+        assert len(resumed.request(f"/v1/conversations/{conversation}", token=token)["turns"]) == 2
+        report["checks"].append("wallet_and_conversation_persist")
     finally:
         resumed.close()
     import socket

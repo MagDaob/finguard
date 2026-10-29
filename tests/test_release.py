@@ -172,3 +172,15 @@ def test_project_version_conflict_is_detected_before_packaging(tmp_path):
     )
     with pytest.raises(release.ReleaseError, match="component version"):
         release.versions(tmp_path)
+
+
+def test_optional_current_desktop_checks_are_preserved_but_unknown_fields_are_not():
+    report = {
+        "version": "0.3.0",
+        "status": "passed",
+        "checks": [*release.CHECKS, "wallet_and_conversation_persist", "unknown-check"],
+        "paid_model_calls": 0,
+    }
+    result = release.validate_report(report, "0.3.0")
+    assert "wallet_and_conversation_persist" in result["checks"]
+    assert "unknown-check" not in result["checks"]

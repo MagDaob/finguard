@@ -28,6 +28,14 @@ CHECKS = {
 }
 
 
+OPTIONAL_CHECKS = {
+    "chat_without_task_and_no_model",
+    "clarification_without_task",
+    "classified_task_counts",
+    "wallet_and_conversation_persist",
+}
+
+
 class ReleaseError(ValueError):
     pass
 
@@ -252,7 +260,7 @@ def validate_report(report, version):
     result = {
         "version": version,
         "status": "passed",
-        "checks": sorted(CHECKS),
+        "checks": sorted(CHECKS | (set(report.get("checks", [])) & OPTIONAL_CHECKS)),
         "paid_model_calls": 0,
     }
     for key in ("startup_seconds", "resume_seconds"):
