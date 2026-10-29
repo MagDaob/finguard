@@ -123,3 +123,7 @@ AI 与插件接口的保存、启用能力仍待服务端提供，当前仅校�
 ![任务下拉菜单与未配置模型提示，虚构模拟数据](assets/screenshots/chat-menu.png)
 
 ![已完成任务分类，虚构模拟数据](assets/screenshots/task-groups.png)
+
+## 桌面候选打包补充
+
+2026 年 10 月 29 日，上述最新界面与后端已完整打入 `windows-x64-20261029` 便携候选，实际 EXE 10 项自检及发布附件复核通过。此前“桌面尚未构建”的记录保留为各轮验收时的状态；当前交付以[发布验收](release-preparation-validation.md)为准。
