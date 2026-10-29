@@ -412,11 +412,12 @@ def test_conversation_clarifies_amount_and_preserves_original_task(client):
     created = chat_send(
         client, "chat-clarify", "message-one", "给小王转账，至少保留1000元", 0
     ).json()
-    reference = created["turns"][0]["task_ref"]
-    assert client.get("/v1/tasks/" + reference).json()["status"] == "WAITING_CLARIFICATION"
+    assert created["turns"][0]["task_ref"] is None
+    assert created["turns"][0]["kind"] == "draft"
+    assert client.get("/v1/tasks").json() == []
     clarified = chat_send(client, "chat-clarify", "message-two", "300元", 1)
     assert clarified.status_code == 200, clarified.text
-    assert clarified.json()["turns"][-1]["task_ref"] == reference
+    reference = clarified.json()["turns"][-1]["task_ref"]
     task = client.get("/v1/tasks/" + reference).json()
     assert task["status"] == "WAITING_APPROVAL"
     assert task["operations"][0]["arguments"]["amount_minor"] == 30000
@@ -540,3 +541,97 @@ def test_wallet_bank_failure_does_not_create_connection(client, monkeypatch):
         == 503
     )
     assert client.get("/v1/wallet").json()["connections"] == []
+
+
+def test_chat_without_model_does_not_create_tasks_or_read_bank(client, monkeypatch):
+    def forbidden(*args):
+        raise AssertionError("ordinary chat accessed bank")
+
+    monkeypatch.setattr(client.app.state.backend, "_context", forbidden)
+    reply = chat_send(client, "chat-normal", "message-one", "你好，介绍一下自己", 0)
+    assert reply.status_code == 200, reply.text
+    turn = client.get("/v1/conversations/chat-normal").json()["turns"][0]
+    assert (
+        turn["task_ref"] is None and turn["ready"] and turn["error_code"] == "CHAT_NOT_CONFIGURED"
+    )
+    assert client.get("/v1/tasks").json() == []
+
+
+def test_chat_real_reply_path_uses_history_and_retries_without_new_turn(client, monkeypatch):
+    from finguard.backend.errors import ServiceError
+
+    calls = []
+
+    class Model:
+        def complete(self, *args, **kwargs):
+            from finguard.backend.deepseek import Completion
+
+            return Completion({"content": '{"kind":"chat"}'}, "test", {}, 0)
+
+        def stream_text(self, messages):
+            calls.append(messages)
+            if len(calls) == 1:
+                raise ServiceError("CHAT_TIMEOUT", "测试中断", 503)
+            yield "你好，"
+            yield "我可以帮助你。"
+
+    client.app.state.conversations.chat.model = Model()
+    chat_send(client, "chat-reply", "message-one", "你好", 0)
+    assert (
+        client.get("/v1/conversations/chat-reply").json()["turns"][0]["error_code"]
+        == "CHAT_TIMEOUT"
+    )
+    chat_send(client, "chat-reply", "message-one", "你好", 0)
+    turn = client.get("/v1/conversations/chat-reply").json()["turns"][0]
+    assert turn["reply"] == "你好，我可以帮助你。" and turn["error_code"] is None
+    chat_send(client, "chat-reply", "message-two", "继续聊聊", 1)
+    assert any(
+        m["role"] == "assistant" and m["content"] == "你好，我可以帮助你。" for m in calls[-1]
+    )
+    assert len(client.get("/v1/conversations/chat-reply").json()["turns"]) == 2
+    assert client.get("/v1/tasks").json() == []
+
+
+def test_task_groups_check_evidence_and_full_counts(client):
+    first = chat_send(client, "group-read", "message-one", "查询余额", 0).json()
+    chat_send(client, "group-write", "message-one", "给小王转300元", 0)
+    counts = client.get("/v1/task-groups/counts").json()
+    assert counts == {"pending": 1, "completed": 1, "ended": 0, "all": 2}
+    assert len(client.get("/v1/task-groups/pending").json()) == 1
+    assert len(client.get("/v1/task-groups/completed").json()) == 1
+    ref = first["turns"][0]["task_ref"]
+    with client.app.state.backend.db.transaction() as c:
+        c.execute(
+            "DELETE FROM evidence WHERE operation_ref IN (SELECT operation_ref FROM operations WHERE task_ref=%s)",
+            (ref,),
+        )
+    counts = client.get("/v1/task-groups/counts").json()
+    assert counts["completed"] == 0 and counts["pending"] == 2
+    assert client.get("/v1/task-groups/invalid").status_code == 422
+
+
+def test_legacy_clarification_does_not_capture_normal_chat(client, monkeypatch):
+    from psycopg.types.json import Jsonb
+
+    legacy = client.post(
+        "/v1/tasks", json={"client_request_ref": "legacy-clarify", "user_request": "给小王转账"}
+    ).json()
+    assert legacy["status"] == "WAITING_CLARIFICATION"
+    with client.app.state.backend.db.transaction() as c:
+        c.execute(
+            "INSERT INTO conversations(conversation_ref,subject_ref) VALUES ('legacy-chat','user-demo-001')"
+        )
+        c.execute(
+            "INSERT INTO conversation_turns(conversation_ref,sequence,message_ref,request_digest,user_text,payload,task_ref,ready,reply) VALUES ('legacy-chat',1,'old-message','old-digest','给小王转账',%s,%s,true,'请补充金额')",
+            (Jsonb({"kind": "create"}), legacy["task_ref"]),
+        )
+
+    def forbidden(*args):
+        raise AssertionError("normal chat read banking context")
+
+    monkeypatch.setattr(client.app.state.backend, "_context", forbidden)
+    response = chat_send(client, "legacy-chat", "message-two", "你好", 1)
+    assert response.status_code == 200, response.text
+    turn = client.get("/v1/conversations/legacy-chat").json()["turns"][-1]
+    assert turn["kind"] == "chat" and turn["task_ref"] is None
+    assert len(client.get("/v1/tasks").json()) == 1

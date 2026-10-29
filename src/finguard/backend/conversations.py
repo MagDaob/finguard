@@ -5,7 +5,8 @@ import re
 from psycopg.types.json import Jsonb
 from pydantic import Field
 
-from finguard.backend.catalog import ReplanRequest, RequestModel, TaskCreate, digest
+from finguard.backend.catalog import Constraints, ReplanRequest, RequestModel, TaskCreate, digest
+from finguard.backend.chat import ConversationAI
 from finguard.backend.errors import ServiceError, require
 from finguard.backend.privacy import redact_text
 from finguard.backend.understanding import money_minor
@@ -39,7 +40,8 @@ def same_steps(left, right):
 
 
 class Conversations:
-    def __init__(self, backend):
+    def __init__(self, backend, chat=None):
+        self.chat = chat or ConversationAI()
         self.backend = backend
         self.db = backend.db
         self.security = backend.security
@@ -65,20 +67,57 @@ class Conversations:
         with self.db.transaction() as c:
             row = self._owner(c, actor, reference)
             turns = c.execute(
-                "SELECT sequence,message_ref,user_text,task_ref,ready,reply,created_at FROM conversation_turns WHERE conversation_ref=%s ORDER BY sequence",
+                "SELECT sequence,message_ref,user_text,task_ref,ready,reply,created_at,payload->>'kind' AS kind,payload->>'error_code' AS error_code FROM conversation_turns WHERE conversation_ref=%s ORDER BY sequence",
                 (reference,),
             ).fetchall()
         return {**row, "turns": turns}
 
-    def _prepare(self, actor, content, previous):
-        if re.fullmatch(r"\s*(好[的]?|确认|继续|执行|可以)[。！!\s]*", content):
+    def _prepare(self, actor, content, previous, history=(), last=None, draft=None):
+        if (
+            previous
+            and last
+            and last["payload"]["kind"] in {"create", "replan"}
+            and re.fullmatch(r"\s*(好[的]?|确认|继续|执行|可以)[。！!\s]*", content)
+        ):
             return {"kind": "reply"}, "请使用当前操作卡片确认。对话文字不会签发付款授权。"
+        if draft:
+            if content.strip() in {"不用了", "取消这个目标", "放弃这个目标"}:
+                return {"kind": "cancel_draft"}, "已放弃待澄清的目标，没有建立任务。"
+            amount = re.fullmatch(
+                r"(?:金额(?:是|为)?|补充金额[:：]?)?\s*([零〇一二两三四五六七八九十百千万\d.]+)\s*元",
+                content.strip(),
+            )
+            if amount:
+                goal, count = re.subn(
+                    r"(转账|转|打款)(?=\s*(?:[，,；;]|$))",
+                    lambda m: m[1] + amount[1] + "元",
+                    draft["goal"],
+                )
+                if count == 1:
+                    return self._task_intent(
+                        actor,
+                        goal,
+                        previous,
+                        Constraints.model_validate(draft.get("constraints", {})),
+                    )
+            if content.startswith(("完整目标：", "完整目标:")):
+                return self._task_intent(
+                    actor,
+                    content[5:],
+                    previous,
+                    Constraints.model_validate(draft.get("constraints", {})),
+                )
         match = re.fullmatch(
             r"\s*(?:改成|改为|金额改成|金额改为)\s*([零〇一二两三四五六七八九十百千万亿\d.]+)\s*元?[。！!\s]*",
             content,
         )
         if match:
-            require(previous is not None, "NO_CONTEXT", "请先描述要修改的转账任务。", 409)
+            if last and last["payload"]["kind"] == "chat":
+                return {
+                    "kind": "reply"
+                }, "请明确要修改哪项业务，或在任务卡片中修改；当前聊天不会直接改写此前转账。"
+            if previous is None:
+                return {"kind": "reply"}, "你希望修改哪项业务？请先说明完整目标，暂未建立任务。"
             steps = plan_steps(previous)
             transfers = [s for s in steps if s["action"] == "transfer.create"]
             require(
@@ -111,7 +150,17 @@ class Conversations:
                 "expected_version": previous["current_version"],
                 "steps": steps,
             }, "已更新未提交的转账金额。请重新核对当前预览，原确认不适用于新参数。"
-        if previous and previous["status"] == "WAITING_CLARIFICATION":
+        if (
+            previous
+            and previous["status"] == "WAITING_CLARIFICATION"
+            and (
+                content.startswith(("完整目标：", "完整目标:"))
+                or re.fullmatch(
+                    r"(?:金额(?:是|为)?|补充金额[:：]?)?\s*([零〇一二两三四五六七八九十百千万\d.]+)\s*元",
+                    content.strip(),
+                )
+            )
+        ):
             amount = re.fullmatch(
                 r"(?:金额(?:是|为)?|补充金额[:：]?)?\s*([零〇一二两三四五六七八九十百千万\d.]+)\s*元",
                 content.strip(),
@@ -146,10 +195,107 @@ class Conversations:
                     s.model_dump(mode="json") if hasattr(s, "model_dump") else s for s in steps
                 ],
             }, "已补全目标并更新原任务。资金操作仍需在卡片中确认。"
+        kind = self.chat.decide(content, list(history))
+        if kind == "chat":
+            return {"kind": "chat"}, "正在回复…"
+        if kind == "clarify":
+            return {
+                "kind": "draft",
+                "goal": redact_text(content),
+                "constraints": {},
+            }, "你希望了解相关信息，还是让我办理业务？请明确目标，暂未建立任务。"
+        return self._task_intent(actor, content, previous)
+
+    def _task_intent(self, actor, goal, previous, constraints=None):
+        context = self.backend._context(actor, goal)
+        if previous:
+            accounts = {
+                o["arguments"].get("source_account_ref", o["arguments"].get("account_ref"))
+                for o in previous["operations"]
+            } - {None}
+            if len(accounts) == 1:
+                context["preferred_account_ref"] = next(iter(accounts))
+        steps, limits, questions = self.backend.planner.infer(
+            goal, context, constraints or Constraints()
+        )
+        if questions or not steps:
+            return {
+                "kind": "draft",
+                "goal": redact_text(goal),
+                "constraints": limits.model_dump(mode="json"),
+            }, "暂未建立任务。" + "；".join(
+                q["message"] for q in questions
+            ) + " 可补充单笔金额，或以“完整目标：”重述全部目标。"
         return {
             "kind": "create",
+            "goal": redact_text(goal),
             "context_task_ref": previous["task_ref"] if previous else None,
-        }, "已识别目标并登记任务，查询会自动推进；资金操作请核对确认卡。"
+            "steps": [
+                step.model_dump(mode="json") if hasattr(step, "model_dump") else step
+                for step in steps
+            ],
+            "constraints": limits.model_dump(mode="json"),
+        }, "已登记任务。查询自动推进，资金操作请核对确认卡。"
+
+    def finish_chat(self, actor, reference, message_ref):
+        with self.db.task_lock("chat-reply:" + reference) as acquired:
+            if not acquired:
+                return
+            with self.db.transaction() as c:
+                self._owner(c, actor, reference)
+                turn = c.execute(
+                    "SELECT * FROM conversation_turns WHERE conversation_ref=%s AND message_ref=%s",
+                    (reference, message_ref),
+                ).fetchone()
+                if not turn or turn["ready"] or turn["payload"]["kind"] != "chat":
+                    return
+                rows = c.execute(
+                    "SELECT user_text,reply,payload FROM conversation_turns WHERE conversation_ref=%s AND sequence<%s AND ready ORDER BY sequence DESC LIMIT 10",
+                    (reference, turn["sequence"]),
+                ).fetchall()
+            history = []
+            for row in reversed(rows):
+                history.append({"role": "user", "content": row["user_text"]})
+                if not row["payload"].get("error_code"):
+                    history.append({"role": "assistant", "content": row["reply"]})
+            output = ""
+            stored = 0
+            try:
+                self.security.require_scope(actor, "tasks.read")
+                for chunk in self.chat.stream(turn["user_text"], history):
+                    output += chunk
+                    require(
+                        len(output) <= 20000,
+                        "CHAT_RESPONSE_TOO_LARGE",
+                        "AI 回复超过长度预算。",
+                        503,
+                    )
+                    if len(output) - stored >= 80:
+                        with self.db.transaction() as c:
+                            self.security.require_scope(actor, "tasks.read", c)
+                            c.execute(
+                                "UPDATE conversation_turns SET reply=%s WHERE conversation_ref=%s AND message_ref=%s",
+                                (redact_text(output), reference, message_ref),
+                            )
+                        stored = len(output)
+                require(bool(output.strip()), "CHAT_EMPTY", "AI 未返回有效回复，请重试。", 503)
+                reply = redact_text(output)
+                payload = {"kind": "chat"}
+            except Exception as error:
+                code = error.code if isinstance(error, ServiceError) else "CHAT_UNAVAILABLE"
+                reply = (
+                    error.message
+                    if isinstance(error, ServiceError)
+                    else "AI 回复暂不可用，请重试。"
+                )
+                if output:
+                    reply = redact_text(output) + "\n\n回复中断，请重试获取完整内容。"
+                payload = {"kind": "chat", "error_code": code}
+            with self.db.transaction() as c:
+                c.execute(
+                    "UPDATE conversation_turns SET reply=%s,payload=%s,ready=true WHERE conversation_ref=%s AND message_ref=%s",
+                    (reply, Jsonb(payload), reference, message_ref),
+                )
 
     @staticmethod
     def _constraints(task):
@@ -193,6 +339,17 @@ class Conversations:
                     409,
                 )
                 if turn["ready"]:
+                    if (
+                        turn["payload"]["kind"] == "chat"
+                        and turn["payload"].get("error_code")
+                        and last["sequence"] == turn["sequence"]
+                    ):
+                        with self.db.transaction() as c:
+                            c.execute(
+                                "UPDATE conversation_turns SET ready=false,reply='正在回复…',payload=%s WHERE conversation_ref=%s AND message_ref=%s",
+                                (Jsonb({"kind": "chat"}), reference, request.message_ref),
+                            )
+                        return self.get(actor, reference)
                     return self.get(actor, reference)
             else:
                 require(
@@ -219,7 +376,26 @@ class Conversations:
                         (reference,),
                     ).fetchone()
                 previous = self.backend.get_task(actor, prior["task_ref"]) if prior else None
-                payload, reply = self._prepare(actor, request.content, previous)
+                with self.db.transaction() as c:
+                    recent = c.execute(
+                        "SELECT user_text,reply,payload FROM conversation_turns WHERE conversation_ref=%s AND ready ORDER BY sequence DESC LIMIT 10",
+                        (reference,),
+                    ).fetchall()
+                history = []
+                for row in reversed(recent):
+                    history.append({"role": "user", "content": row["user_text"]})
+                    if not row["payload"].get("error_code"):
+                        history.append({"role": "assistant", "content": row["reply"]})
+                draft = None
+                for row in recent:
+                    if row["payload"]["kind"] in {"create", "replan", "cancel_draft"}:
+                        break
+                    if row["payload"]["kind"] == "draft":
+                        draft = row["payload"]
+                        break
+                payload, reply = self._prepare(
+                    actor, request.content, previous, history, last, draft
+                )
                 with self.db.transaction() as c:
                     self.security.require_scope(actor, "tasks.write", c)
                     turn = c.execute(
@@ -235,6 +411,8 @@ class Conversations:
                         ),
                     ).fetchone()
             payload = turn["payload"]
+            if payload["kind"] == "chat":
+                return self.get(actor, reference)
             try:
                 task = None
                 if payload["kind"] == "create":
@@ -243,8 +421,10 @@ class Conversations:
                         TaskCreate(
                             client_request_ref="chat-"
                             + digest([reference, request.message_ref])[:40],
-                            user_request=turn["user_text"],
+                            user_request=payload.get("goal", turn["user_text"]),
                             context_task_ref=payload["context_task_ref"],
+                            steps=payload.get("steps", ()),
+                            constraints=payload.get("constraints", {}),
                         ),
                     )
                 elif payload["kind"] == "replan":

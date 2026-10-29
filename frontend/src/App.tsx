@@ -4,7 +4,6 @@ import {
     ChevronRight,
     CircleUserRound,
     CreditCard,
-    FolderKanban,
     PlugZap,
     ShieldCheck,
     Wallet,
@@ -13,10 +12,11 @@ import {
 import { useSession } from './session'
 import { ErrorNotice, Field, Loading } from './ui'
 import { desktopSession, useDesktop } from './desktop'
-import { TasksPage, TaskHistory } from './tasks'
+import { TasksPage } from './tasks'
 import styles from './App.module.css'
 import { usePreferences } from './preferences'
 import { ConversationRoute, ConversationHistory } from './conversations'
+import { TaskMenu, TaskGroupPage } from './task-groups'
 
 const AccountsPage = lazy(() => import('./business').then((m) => ({ default: m.AccountsPage })))
 const AuthorizationsPage = lazy(() =>
@@ -131,7 +131,6 @@ export default function App() {
     const location = useLocation()
     useEffect(() => setMenuOpen(false), [location.pathname])
     const links = [
-        ['/tasks', '任务', FolderKanban],
         ['/accounts', '账单明细', Wallet],
         ['/services', '卡包', CreditCard],
         ['/settings', '设置', PlugZap],
@@ -172,7 +171,11 @@ export default function App() {
             ) : (
                 <>
                     <aside className={`${styles.sidebar} ${menuOpen ? styles.open : ''}`}>
+                        <NavLink className={styles.newTask} to="/tasks">
+                            ＋ 新对话
+                        </NavLink>
                         <nav aria-label="主导航" className={styles.nav}>
+                            <TaskMenu />
                             {links.map(([to, title, Icon]) => (
                                 <NavLink key={to} to={to}>
                                     <Icon size={19} />
@@ -180,27 +183,16 @@ export default function App() {
                                 </NavLink>
                             ))}
                         </nav>
-                        {location.pathname.startsWith('/tasks') && (
-                            <>
-                                <NavLink className={styles.newTask} to="/tasks">
-                                    ＋ 新建任务
-                                </NavLink>
-                                <Routes>
-                                    <Route
-                                        path="/tasks/*"
-                                        element={
-                                            <>
-                                                <ConversationHistory />
-                                                <details>
-                                                    <summary>任务记录</summary>
-                                                    <TaskHistory />
-                                                </details>
-                                            </>
-                                        }
-                                    />
-                                </Routes>
-                            </>
-                        )}
+                        <details className="history-menu">
+                            <summary>对话历史</summary>
+                            <Routes>
+                                <Route
+                                    path="/tasks/chat/:conversationRef"
+                                    element={<ConversationHistory />}
+                                />
+                                <Route path="*" element={<ConversationHistory />} />
+                            </Routes>
+                        </details>
                         <div className={styles.footnote}>
                             <span className="status-dot" /> 模拟环境
                         </div>
@@ -208,6 +200,7 @@ export default function App() {
                     <main className={styles.main} key={epoch}>
                         <Suspense fallback={<Loading />}>
                             <Routes>
+                                <Route path="/tasks/list/:group" element={<TaskGroupPage />} />
                                 <Route path="/tasks" element={<TasksPage />} />
                                 <Route
                                     path="/tasks/chat/:conversationRef"

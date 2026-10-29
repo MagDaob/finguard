@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 import psycopg
-from fastapi import Depends, FastAPI, Header, Query, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, Query, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,6 +16,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import Field, ValidationError
 
 from finguard import __version__
+from finguard.backend import task_groups
 from finguard.backend.bank import HttpBank
 from finguard.backend.catalog import (
     ApprovalRequest,
@@ -25,10 +26,11 @@ from finguard.backend.catalog import (
     TaskCreate,
     required_scopes,
 )
+from finguard.backend.chat import ConversationAI
 from finguard.backend.config import Settings
 from finguard.backend.conversations import Conversations, MessageRequest
 from finguard.backend.database import Database
-from finguard.backend.deepseek import DeepSeekPlanner
+from finguard.backend.deepseek import DeepSeekClient, DeepSeekPlanner
 from finguard.backend.errors import ServiceError, require
 from finguard.backend.evaluation import ReplayRunner, ReplaySuite
 from finguard.backend.model_factory import configured_planner
@@ -118,6 +120,12 @@ def create_app(settings: Settings | None = None, planner=None, *, bank=None) -> 
         step_up_threshold_minor=settings.step_up_threshold_minor,
     )
     policies = Policies(database, gateway)
+    chat_model = (
+        DeepSeekClient(settings)
+        if settings.chat_provider == "deepseek"
+        or (settings.chat_provider == "auto" and settings.model_provider == "deepseek")
+        else None
+    )
 
     async def recover_loop(app):
         while True:
@@ -146,6 +154,8 @@ def create_app(settings: Settings | None = None, planner=None, *, bank=None) -> 
                     await worker
             if gateway and hasattr(gateway, "close"):
                 gateway.close()
+            if chat_model:
+                chat_model.close()
             if owns_bank:
                 bank.close()
 
@@ -379,7 +389,17 @@ def create_app(settings: Settings | None = None, planner=None, *, bank=None) -> 
     def compensation_preview(operation_ref: str, actor: Actor = actor_dependency):
         return backend.compensation_preview(actor, operation_ref)
 
-    conversations = Conversations(backend)
+    conversations = Conversations(backend, ConversationAI(chat_model))
+    app.state.conversations = conversations
+
+    @app.get("/v1/chat/status", tags=["tasks"])
+    def chat_status(actor: Actor = actor_dependency):
+        backend.security.require_scope(actor, "tasks.read")
+        return {
+            "enabled": chat_model is not None,
+            "provider": "deepseek" if chat_model else None,
+            "streaming": chat_model is not None,
+        }
 
     @app.get("/v1/conversations", tags=["tasks"])
     def conversation_list(actor: Actor = actor_dependency, before: str | None = None):
@@ -391,9 +411,26 @@ def create_app(settings: Settings | None = None, planner=None, *, bank=None) -> 
 
     @app.post("/v1/conversations/{conversation_ref}/messages", tags=["tasks"])
     def conversation_send(
-        conversation_ref: Reference, request: MessageRequest, actor: Actor = actor_dependency
+        conversation_ref: Reference,
+        request: MessageRequest,
+        background: BackgroundTasks,
+        actor: Actor = actor_dependency,
     ):
-        return conversations.send(actor, conversation_ref, request)
+        result = conversations.send(actor, conversation_ref, request)
+        turn = next(t for t in result["turns"] if t["message_ref"] == request.message_ref)
+        if turn["kind"] == "chat" and not turn["ready"]:
+            background.add_task(
+                conversations.finish_chat, actor, conversation_ref, request.message_ref
+            )
+        return result
+
+    @app.get("/v1/task-groups/counts", tags=["tasks"])
+    def task_group_counts(actor: Actor = actor_dependency):
+        return task_groups.counts(backend, actor)
+
+    @app.get("/v1/task-groups/{group}", tags=["tasks"])
+    def task_group_list(group: str, actor: Actor = actor_dependency, before: str | None = None):
+        return task_groups.listing(backend, actor, group, before)
 
     @app.post("/v1/tasks", status_code=201, tags=["tasks"])
     def create_task(request: TaskCreate, actor: Actor = actor_dependency):

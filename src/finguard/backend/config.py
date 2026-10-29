@@ -26,6 +26,7 @@ class Settings(BaseModel):
     model_name: str | None = None
     model_allow_local_http: bool = False
     model_provider: Literal["deterministic", "gateway", "deepseek"] = "deterministic"
+    chat_provider: Literal["auto", "disabled", "deepseek"] = "auto"
     deepseek_api_key: SecretStr | None = None
     deepseek_model: Literal["deepseek-flash", "deepseek-v4-pro"] = "deepseek-flash"
     deepseek_planning_mode: Literal["auto", "loop"] = "auto"

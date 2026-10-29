@@ -63,6 +63,86 @@ class DeepSeekClient:
     def close(self):
         self._http.close()
 
+    def stream_text(self, messages):
+        require(
+            len(canonical(messages).encode()) <= 65536,
+            "MODEL_CONTEXT_TOO_LARGE",
+            "模型上下文超过当前预算。",
+            422,
+        )
+        require(self._slots.acquire(timeout=5), "MODEL_BUSY", "模型并发已满，请稍后重试。", 503)
+        try:
+            with self._lock:
+                require(
+                    self.request_budget is None or self.request_count < self.request_budget,
+                    "MODEL_REQUEST_BUDGET",
+                    "模型请求预算已用完。",
+                    503,
+                )
+                self.request_count += 1
+            payload = {
+                "model": self.settings.deepseek_model,
+                "messages": messages,
+                "max_tokens": self.settings.deepseek_max_tokens,
+                "thinking": {"type": "disabled"},
+                "stream": True,
+            }
+            done, finish, total = False, None, 0
+            deadline = time.monotonic() + self.settings.deepseek_timeout_seconds
+            with self._http.stream(
+                "POST", OFFICIAL_URL, json=payload, timeout=self.settings.deepseek_timeout_seconds
+            ) as response:
+                require(
+                    response.is_success,
+                    "CHAT_MODEL_UNAVAILABLE",
+                    "AI 对话服务暂不可用，请重试。",
+                    503,
+                )
+                for line in response.iter_lines():
+                    require(
+                        time.monotonic() < deadline, "CHAT_TIMEOUT", "AI 回复超时，请重试。", 503
+                    )
+                    if not line.startswith("data:"):
+                        continue
+                    data = line[5:].strip()
+                    if data == "[DONE]":
+                        done = True
+                        break
+                    item = json.loads(data)
+                    if not item.get("choices"):
+                        continue
+                    choice = item["choices"][0]
+                    require(
+                        not choice.get("delta", {}).get("tool_calls"),
+                        "CHAT_INVALID_RESPONSE",
+                        "普通对话不能调用业务工具。",
+                        503,
+                    )
+                    content = choice.get("delta", {}).get("content")
+                    if content:
+                        require(
+                            isinstance(content, str),
+                            "CHAT_INVALID_RESPONSE",
+                            "AI 回复格式无效。",
+                            503,
+                        )
+                        total += len(content)
+                        require(
+                            total <= 20000, "CHAT_RESPONSE_TOO_LARGE", "AI 回复超过长度预算。", 503
+                        )
+                        yield content
+                    finish = choice.get("finish_reason") or finish
+                require(
+                    done and finish in {"stop", "length"} and total > 0,
+                    "CHAT_INCOMPLETE",
+                    "AI 回复未完整返回，请重试。",
+                    503,
+                )
+        except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError) as exc:
+            raise ServiceError("CHAT_MODEL_UNAVAILABLE", "AI 回复中断，请重试。", 503) from exc
+        finally:
+            self._slots.release()
+
     def complete(
         self,
         messages: list[dict],

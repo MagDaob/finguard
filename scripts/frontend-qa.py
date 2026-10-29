@@ -65,6 +65,7 @@ def main():
             "FINGUARD_BANK_API_KEY": service_key,
             "FINGUARD_BANK_URL": "http://127.0.0.1:8003",
             "FINGUARD_MODEL_PROVIDER": "deterministic",
+            "FINGUARD_CHAT_PROVIDER": "disabled",
             "FINGUARD_MODEL_URL": "",
             "FINGUARD_EVALUATION_ENABLED": "true",
             "FINGUARD_WORKER_ENABLED": "true",

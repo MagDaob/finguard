@@ -370,3 +370,36 @@ def test_http_uses_deepseek_loop_but_still_waits_for_business_approval(
         )
         assert "private-model-reasoning" not in json.dumps(trace)
         assert bank.list_accounts(actor.subject_ref)[0]["balance_minor"] == 150000
+
+
+def test_plain_chat_stream_reads_real_sse_and_rejects_incomplete():
+    def transport(request):
+        body = json.loads(request.content)
+        assert body["stream"] is True and "tools" not in body
+        data = (
+            "data: "
+            + json.dumps({"choices": [{"delta": {"content": "你好"}, "finish_reason": None}]})
+            + "\n\n"
+        )
+        data += (
+            "data: "
+            + json.dumps({"choices": [{"delta": {}, "finish_reason": "stop"}]})
+            + "\n\ndata: [DONE]\n\n"
+        )
+        return httpx.Response(200, text=data, headers={"content-type": "text/event-stream"})
+
+    client = DeepSeekClient(settings(), transport=httpx.MockTransport(transport))
+    assert "".join(client.stream_text([{"role": "user", "content": "你好"}])) == "你好"
+    client.close()
+    client = DeepSeekClient(
+        settings(),
+        transport=httpx.MockTransport(
+            lambda r: httpx.Response(
+                200,
+                text='data: {"choices":[{"delta":{"content":"一半"},"finish_reason":null}]}\n\n',
+            )
+        ),
+    )
+    with pytest.raises(ServiceError, match="未完整返回"):
+        list(client.stream_text([{"role": "user", "content": "你好"}]))
+    client.close()

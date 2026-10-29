@@ -65,6 +65,8 @@ export function useRefresh() {
         await Promise.all([
             q.invalidateQueries({ queryKey: [me?.subject_ref, 'task', task?.task_ref] }),
             q.invalidateQueries({ queryKey: [me?.subject_ref, 'tasks'] }),
+            q.invalidateQueries({ queryKey: [me?.subject_ref, 'task-group-counts'] }),
+            q.invalidateQueries({ queryKey: [me?.subject_ref, 'task-groups'] }),
             q.invalidateQueries({ queryKey: [me?.subject_ref, 'accounts'] }),
             q.invalidateQueries({ queryKey: [me?.subject_ref, 'ledger'] }),
             q.invalidateQueries({ queryKey: [me?.subject_ref, 'services'] }),

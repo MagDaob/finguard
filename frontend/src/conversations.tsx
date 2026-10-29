@@ -23,6 +23,8 @@ const conversationSchema = z.object({
             task_ref: z.string().nullable(),
             ready: z.boolean(),
             reply: z.string(),
+            kind: z.string().optional(),
+            error_code: z.string().nullable().optional(),
             created_at: z.string(),
         }),
     ),
@@ -111,21 +113,37 @@ function ConversationPage({ reference }: { reference?: string }) {
         pending = useRef<Pending | null>(null),
         lock = useRef(false),
         input = useRef<HTMLTextAreaElement>(null)
+    const chatStatus = useQuery({
+        queryKey: [me?.subject_ref, 'chat-status'],
+        enabled: !!api,
+        queryFn: ({ signal }) =>
+            api!.get(
+                '/v1/chat/status',
+                z.object({
+                    enabled: z.boolean(),
+                    provider: z.string().nullable(),
+                    streaming: z.boolean(),
+                }),
+                signal,
+            ),
+    })
     const query = useQuery({
         queryKey: [me?.subject_ref, 'conversation', reference],
         enabled: !!api && !!reference,
         queryFn: ({ signal }) =>
             api!.get('/v1/conversations/' + reference, conversationSchema, signal),
-        refetchInterval: (query) => (query.state.data?.turns.some((t) => !t.ready) ? 3000 : false),
+        refetchInterval: (query) => (query.state.data?.turns.some((t) => !t.ready) ? 1000 : false),
     })
     const conversation = query.data,
         turns = conversation?.turns ?? [],
         taskRefs = [...new Set(turns.flatMap((t) => (t.task_ref ? [t.task_ref] : [])))],
         lastTask = taskRefs.at(-1),
-        active = selected || lastTask
+        active =
+            selected ||
+            (['create', 'replan', undefined].includes(turns.at(-1)?.kind) ? lastTask : undefined)
     useEffect(() => {
         setSelected('')
-    }, [lastTask])
+    }, [lastTask, turns.length])
     async function send(e?: FormEvent, recovery?: Pending) {
         e?.preventDefault()
         if (!api || lock.current) return
@@ -154,7 +172,7 @@ function ConversationPage({ reference }: { reference?: string }) {
                 ...new Set(next.turns.flatMap((t) => (t.task_ref ? [t.task_ref] : []))),
             ])
                 await q.invalidateQueries({ queryKey: [me?.subject_ref, 'task', ref] })
-            await refresh()
+            if (next.turns.at(-1)?.task_ref) await refresh()
             if (!reference) navigate('/tasks/chat/' + id.current, { replace: true })
             else await query.refetch()
             input.current?.focus()
@@ -180,33 +198,40 @@ function ConversationPage({ reference }: { reference?: string }) {
             <header className="chat-heading">
                 <div>
                     <span className="eyebrow">FinGuard AGENT</span>
-                    <h1>{reference ? '任务对话' : '开始对话'}</h1>
-                    <p>描述目标，自动登记任务；查询自动推进，资金操作由你确认。</p>
+                    <h1>{reference ? '对话' : '开始对话'}</h1>
+                    <p>可以正常聊天，也可以描述业务目标。明确任务才登记，资金操作由你确认。</p>
                 </div>
                 <Link to="/tasks" className="secondary">
                     新对话
                 </Link>
             </header>
+            {chatStatus.data && !chatStatus.data.enabled && (
+                <p className="chat-configuration">
+                    普通 AI 对话尚未配置，明确的查询和业务任务仍可使用。模型连接需要在服务端启用。
+                </p>
+            )}
             <ErrorNotice error={query.error} />
             {query.isLoading && <Loading />}
             {!turns.length && !query.isLoading && (
                 <div className="chat-welcome">
-                    <h2>今天想完成什么？</h2>
+                    <h2>今天想聊些什么？</h2>
                     <div className="goal-examples">
-                        {['查询当前余额', '看看上个月账单，再给小王转300元，至少保留1000元'].map(
-                            (example) => (
-                                <button
-                                    className="secondary"
-                                    key={example}
-                                    onClick={() => {
-                                        setDraft(example)
-                                        input.current?.focus()
-                                    }}
-                                >
-                                    {example}
-                                </button>
-                            ),
-                        )}
+                        {[
+                            '你好，介绍一下自己',
+                            '查询当前余额',
+                            '看看上个月账单，再给小王转300元，至少保留1000元',
+                        ].map((example) => (
+                            <button
+                                className="secondary"
+                                key={example}
+                                onClick={() => {
+                                    setDraft(example)
+                                    input.current?.focus()
+                                }}
+                            >
+                                {example}
+                            </button>
+                        ))}
                     </div>
                 </div>
             )}
@@ -218,8 +243,30 @@ function ConversationPage({ reference }: { reference?: string }) {
                             <p>{turn.user_text}</p>
                         </div>
                         <div className="chat-agent">
-                            <strong>FinGuard</strong>
-                            <p>{turn.ready ? turn.reply : '正在处理原消息，请核对或恢复。'}</p>
+                            <strong>FinGuard{turn.kind === 'chat' ? ' · AI 对话' : ''}</strong>
+                            <p>
+                                {turn.ready
+                                    ? turn.reply
+                                    : turn.kind === 'chat'
+                                      ? turn.reply || '正在回复…'
+                                      : '正在处理原消息，请核对或恢复。'}
+                            </p>
+                            {turn.error_code && turn.sequence === turns.at(-1)?.sequence && (
+                                <button
+                                    type="button"
+                                    className="secondary"
+                                    disabled={busy}
+                                    onClick={() =>
+                                        void send(undefined, {
+                                            message_ref: turn.message_ref,
+                                            content: turn.user_text,
+                                            expected_sequence: turn.sequence - 1,
+                                        })
+                                    }
+                                >
+                                    重试 AI 回复
+                                </button>
+                            )}
                             {turn.task_ref && (
                                 <button
                                     className="text-button"
@@ -284,7 +331,7 @@ function ConversationPage({ reference }: { reference?: string }) {
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
                     disabled={busy || !!pending.current || !!unfinished}
-                    placeholder="输入目标，或补充信息。例如：改成200元、还剩多少"
+                    placeholder="聊聊你的问题，或告诉我需要办理的业务"
                     rows={3}
                     maxLength={4000}
                     onKeyDown={(e) => {
