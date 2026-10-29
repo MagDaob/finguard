@@ -34,6 +34,7 @@ import {
 import { json, isMinor, money, remaining, yuan, decimal, canonical } from './money'
 import { useAccounts, useRecipients, useRefresh, useTask, useTasks } from './hooks'
 import { useSession } from './session'
+import { ConversationRoute } from './conversations'
 import {
     actionName,
     activeOperations,
@@ -144,6 +145,8 @@ export function TasksPage() {
     }, [location, navigate])
     return taskRef ? (
         <TaskDetail key={taskRef} reference={taskRef} />
+    ) : !preset ? (
+        <ConversationRoute />
     ) : (
         <section className="goal-home">
             <div className="goal-heading">
@@ -559,7 +562,13 @@ export function Composer({
     )
 }
 
-export function TaskDetail({ reference }: { reference: string }) {
+export function TaskDetail({
+    reference,
+    embedded = false,
+}: {
+    reference: string
+    embedded?: boolean
+}) {
     const detail = useTask(reference),
         { api, me } = useSession(),
         refresh = useRefresh(),
@@ -788,94 +797,100 @@ export function TaskDetail({ reference }: { reference: string }) {
                         完成状态待核验。当前证据尚不满足成功展示条件，请刷新任务详情。
                     </Notice>
                 )}
-                <div className="task-actions">
-                    {!['COMPLETED', 'TERMINATED', 'WAITING_CLARIFICATION'].includes(
-                        task.status,
-                    ) && (
-                        <>
-                            <button
-                                className="secondary"
-                                disabled={action.isPending}
-                                onClick={() => setStopping(true)}
-                            >
-                                <Square size={14} />
-                                停止后续步骤
-                            </button>
-                            {ops.some(editable) && (
-                                <button className="text-button" onClick={() => setEditing(true)}>
-                                    修改未提交步骤
+                <details className="task-controls" open={embedded ? undefined : true}>
+                    <summary>任务控制与记录</summary>
+                    <div className="task-actions">
+                        {!['COMPLETED', 'TERMINATED', 'WAITING_CLARIFICATION'].includes(
+                            task.status,
+                        ) && (
+                            <>
+                                <button
+                                    className="secondary"
+                                    disabled={action.isPending}
+                                    onClick={() => setStopping(true)}
+                                >
+                                    <Square size={14} />
+                                    停止后续步骤
                                 </button>
-                            )}
+                                {ops.some(editable) && (
+                                    <button
+                                        className="text-button"
+                                        onClick={() => setEditing(true)}
+                                    >
+                                        修改未提交步骤
+                                    </button>
+                                )}
+                                <button
+                                    className="text-button"
+                                    disabled={action.isPending}
+                                    onClick={() => action.mutate('run')}
+                                >
+                                    {ops.some((o) => o.status === 'UNKNOWN')
+                                        ? '核实原操作'
+                                        : '推进原任务'}
+                                </button>
+                            </>
+                        )}
+                        {ops.length > 0 && (
                             <button
                                 className="text-button"
                                 disabled={action.isPending}
-                                onClick={() => action.mutate('run')}
+                                onClick={() => action.mutate('followup')}
                             >
-                                {ops.some((o) => o.status === 'UNKNOWN')
-                                    ? '核实原操作'
-                                    : '推进原任务'}
+                                关联查询：还剩多少
+                                <ArrowRight size={14} />
                             </button>
-                        </>
-                    )}
-                    {ops.length > 0 && (
+                        )}
+                    </div>
+                    <details
+                        className="activity"
+                        onToggle={(e) => {
+                            const open = e.currentTarget.open
+                            setActivityOpen(open)
+                            if (open) void activity.refetch()
+                        }}
+                    >
+                        <summary>查看执行过程</summary>
+                        <p className="muted">服务端记录 · 最多前 200 条；完整分页可进入诊断。</p>
+                        <ErrorNotice error={activity.error} />
+                        {activity.isFetching && <Loading />}
+                        <ol>
+                            {activity.data?.map((event) => (
+                                <li key={event.sequence}>
+                                    <strong>{event.kind}</strong>
+                                    <small> · {time(event.occurred_at)}</small>
+                                </li>
+                            ))}
+                        </ol>
+                    </details>
+                    <details className="detail-note">
+                        <summary>任务关联与原始目标</summary>
+                        <dl className="facts">
+                            <dt>任务编号</dt>
+                            <dd>{task.task_ref}</dd>
+                            <dt>创建时间</dt>
+                            <dd>{time(task.created_at)}</dd>
+                            <dt>关联任务</dt>
+                            <dd>{task.context_task_ref ?? '无'}</dd>
+                        </dl>
+                    </details>
+                    <div className="export-row">
                         <button
                             className="text-button"
                             disabled={action.isPending}
-                            onClick={() => action.mutate('followup')}
+                            onClick={() => action.mutate('export')}
                         >
-                            关联查询：还剩多少
-                            <ArrowRight size={14} />
+                            <ArrowDownLeft size={15} />
+                            导出任务记录
                         </button>
-                    )}
-                </div>
-                <details
-                    className="activity"
-                    onToggle={(e) => {
-                        const open = e.currentTarget.open
-                        setActivityOpen(open)
-                        if (open) void activity.refetch()
-                    }}
-                >
-                    <summary>查看执行过程</summary>
-                    <p className="muted">服务端记录 · 最多前 200 条；完整分页可进入诊断。</p>
-                    <ErrorNotice error={activity.error} />
-                    {activity.isFetching && <Loading />}
-                    <ol>
-                        {activity.data?.map((event) => (
-                            <li key={event.sequence}>
-                                <strong>{event.kind}</strong>
-                                <small> · {time(event.occurred_at)}</small>
-                            </li>
-                        ))}
-                    </ol>
+                        <small>有限脱敏 · 最多首批 1000 条轨迹 · 分享前请检查</small>
+                        {me?.scopes.includes('tasks.read') && (
+                            <Link to={'/lab/tasks/' + reference} className="text-link">
+                                查看诊断
+                            </Link>
+                        )}
+                    </div>
                 </details>
-                <details className="detail-note">
-                    <summary>任务关联与原始目标</summary>
-                    <dl className="facts">
-                        <dt>任务编号</dt>
-                        <dd>{task.task_ref}</dd>
-                        <dt>创建时间</dt>
-                        <dd>{time(task.created_at)}</dd>
-                        <dt>关联任务</dt>
-                        <dd>{task.context_task_ref ?? '无'}</dd>
-                    </dl>
-                </details>
-                <div className="export-row">
-                    <button
-                        className="text-button"
-                        disabled={action.isPending}
-                        onClick={() => action.mutate('export')}
-                    >
-                        <ArrowDownLeft size={15} />
-                        导出任务记录
-                    </button>
-                    <small>有限脱敏 · 最多首批 1000 条轨迹 · 分享前请检查</small>
-                    {me?.scopes.includes('tasks.read') && (
-                        <Link to={'/lab/tasks/' + reference} className="text-link">
-                            查看诊断
-                        </Link>
-                    )}
-                </div>
             </section>
             {reportOpen && (
                 <aside className="report-panel" aria-label="报告与凭证">

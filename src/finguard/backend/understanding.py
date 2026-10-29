@@ -116,7 +116,8 @@ def infer(message: str, context: dict, constraints: Constraints):
             clause = clause[:-1]
         step = None
         if re.fullmatch(
-            r"(?:查(?:询|一下)?|看(?:看|一下)?|查询一下)?(?:我(?:的)?|账户(?:的)?)?余额", clause
+            r"(?:查(?:询|一下)?|看(?:看|一下)?|查询一下)?(?:我(?:的)?|账户(?:的)?)?(?:当前)?余额",
+            clause,
         ):
             step = Step(
                 step_ref="balance", action="accounts.balance", arguments={"account_ref": account}

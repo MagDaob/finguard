@@ -16,6 +16,7 @@ import { desktopSession, useDesktop } from './desktop'
 import { TasksPage, TaskHistory } from './tasks'
 import styles from './App.module.css'
 import { usePreferences } from './preferences'
+import { ConversationRoute, ConversationHistory } from './conversations'
 
 const AccountsPage = lazy(() => import('./business').then((m) => ({ default: m.AccountsPage })))
 const AuthorizationsPage = lazy(() =>
@@ -185,7 +186,18 @@ export default function App() {
                                     ＋ 新建任务
                                 </NavLink>
                                 <Routes>
-                                    <Route path="/tasks/:taskRef?" element={<TaskHistory />} />
+                                    <Route
+                                        path="/tasks/*"
+                                        element={
+                                            <>
+                                                <ConversationHistory />
+                                                <details>
+                                                    <summary>任务记录</summary>
+                                                    <TaskHistory />
+                                                </details>
+                                            </>
+                                        }
+                                    />
                                 </Routes>
                             </>
                         )}
@@ -196,7 +208,12 @@ export default function App() {
                     <main className={styles.main} key={epoch}>
                         <Suspense fallback={<Loading />}>
                             <Routes>
-                                <Route path="/tasks/:taskRef?" element={<TasksPage />} />
+                                <Route path="/tasks" element={<TasksPage />} />
+                                <Route
+                                    path="/tasks/chat/:conversationRef"
+                                    element={<ConversationRoute />}
+                                />
+                                <Route path="/tasks/:taskRef" element={<TasksPage />} />
                                 <Route path="/accounts/:accountRef?" element={<AccountsPage />} />
                                 <Route path="/authorizations" element={<AuthorizationsPage />} />
                                 <Route path="/products" element={<ProductsPage />} />

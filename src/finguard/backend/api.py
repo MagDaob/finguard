@@ -26,6 +26,7 @@ from finguard.backend.catalog import (
     required_scopes,
 )
 from finguard.backend.config import Settings
+from finguard.backend.conversations import Conversations, MessageRequest
 from finguard.backend.database import Database
 from finguard.backend.deepseek import DeepSeekPlanner
 from finguard.backend.errors import ServiceError, require
@@ -325,6 +326,22 @@ def create_app(settings: Settings | None = None, planner=None, *, bank=None) -> 
     @app.get("/v1/operations/{operation_ref}/compensation-preview", tags=["authorization"])
     def compensation_preview(operation_ref: str, actor: Actor = actor_dependency):
         return backend.compensation_preview(actor, operation_ref)
+
+    conversations = Conversations(backend)
+
+    @app.get("/v1/conversations", tags=["tasks"])
+    def conversation_list(actor: Actor = actor_dependency, before: str | None = None):
+        return conversations.list(actor, before)
+
+    @app.get("/v1/conversations/{conversation_ref}", tags=["tasks"])
+    def conversation_get(conversation_ref: Reference, actor: Actor = actor_dependency):
+        return conversations.get(actor, conversation_ref)
+
+    @app.post("/v1/conversations/{conversation_ref}/messages", tags=["tasks"])
+    def conversation_send(
+        conversation_ref: Reference, request: MessageRequest, actor: Actor = actor_dependency
+    ):
+        return conversations.send(actor, conversation_ref, request)
 
     @app.post("/v1/tasks", status_code=201, tags=["tasks"])
     def create_task(request: TaskCreate, actor: Actor = actor_dependency):

@@ -51,7 +51,7 @@ def test_transfer_synonyms_have_exact_integer_amount(text, context):
     assert steps[0].arguments["recipient_ref"] == "recipient-demo-wang"
 
 
-@pytest.mark.parametrize("text", ["查一下余额", "帮我看看余额", "查询我的余额"])
+@pytest.mark.parametrize("text", ["查一下余额", "帮我看看余额", "查询我的余额", "查询当前余额"])
 def test_balance_is_a_real_read_goal(text, context):
     steps, _, questions = understand(text, context)
     assert not questions and steps[0].action == "accounts.balance"

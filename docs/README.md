@@ -39,3 +39,5 @@
 | [项目原文](sources/project-framework.txt) | 用户提供的原始框架 |
 
 历史报告保留当时配置和摘要。当前发布附件的实际结果以其 `VERIFICATION.json` 为准。
+
+[对话式任务入口](conversations.md)说明当前连续对话、任务登记、自动执行、修订与消息恢复范围。

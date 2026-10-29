@@ -293,3 +293,149 @@ def test_step_up_cannot_be_bypassed_by_delegation(client):
     assert result["operations"][0]["error_code"] == "STEP_UP_REQUIRED"
     assert client.get("/v1/delegations").json()[0]["used_minor"] == 0
     assert client.get("/v1/accounts").json()[0]["balance_minor"] == 150000
+
+
+def chat_send(client, chat, message, content, sequence):
+    return client.post(
+        f"/v1/conversations/{chat}/messages",
+        json={"message_ref": message, "content": content, "expected_sequence": sequence},
+    )
+
+
+def test_conversation_query_and_persistent_context(client):
+    response = chat_send(client, "chat-query", "message-one", "查询当前余额", 0)
+    assert response.status_code == 200, response.text
+    turn = response.json()["turns"][0]
+    task = client.get("/v1/tasks/" + turn["task_ref"]).json()
+    assert task["verified_success"] and task["status"] == "COMPLETED"
+    assert (
+        chat_send(client, "chat-query", "message-one", "查询当前余额", 0).json() == response.json()
+    )
+    assert chat_send(client, "chat-query", "message-one", "换个目标", 0).status_code == 409
+    assert chat_send(client, "chat-query", "message-two", "还剩多少", 0).status_code == 409
+    follow = chat_send(client, "chat-query", "message-two", "还剩多少", 1)
+    assert follow.status_code == 200, follow.text
+    follow_task = client.get("/v1/tasks/" + follow.json()["turns"][-1]["task_ref"]).json()
+    assert follow_task["context_task_ref"] == task["task_ref"] and follow_task["verified_success"]
+    assert len(client.get("/v1/conversations/chat-query").json()["turns"]) == 2
+    assert client.get("/v1/conversations").json()[0]["title"] == "查询当前余额"
+
+
+def test_conversation_revises_unsubmitted_transfer_without_authorizing(client):
+    created = chat_send(client, "chat-transfer", "message-one", "给小王转300元，至少保留1000元", 0)
+    assert created.status_code == 200, created.text
+    reference = created.json()["turns"][0]["task_ref"]
+    task = client.get("/v1/tasks/" + reference).json()
+    assert task["status"] == "WAITING_APPROVAL"
+    original_op = task["operations"][0]
+    original_preview = client.get(f"/v1/operations/{original_op['operation_ref']}/preview").json()
+    assert (
+        client.post(
+            f"/v1/operations/{original_op['operation_ref']}/approvals",
+            json={"expected_digest": original_preview["digest"]},
+        ).status_code
+        == 200
+    )
+    revised = chat_send(client, "chat-transfer", "message-two", "改成200元", 1)
+    assert revised.status_code == 200, revised.text
+    assert revised.json()["turns"][-1]["task_ref"] == reference
+    task = client.get("/v1/tasks/" + reference).json()
+    current = {s["operation_ref"] for s in task["plans"][-1]["steps"]}
+    op = next(o for o in task["operations"] if o["operation_ref"] in current)
+    assert op["arguments"]["amount_minor"] == 20000
+    assert op["arguments"]["minimum_remaining_balance_minor"] == 100000
+    assert task["current_version"] == 2 and op["status"] == "WAITING_APPROVAL"
+    assert (
+        client.get(f"/v1/operations/{original_op['operation_ref']}/approvals").json()[0]["status"]
+        == "REVOKED"
+    )
+    assert client.get(f"/v1/operations/{op['operation_ref']}/approvals").json() == []
+    assert chat_send(client, "chat-transfer", "message-three", "好", 2).status_code == 200
+    assert client.get(f"/v1/operations/{op['operation_ref']}/approvals").json() == []
+    assert chat_send(client, "chat-transfer", "message-two", "改成200元", 1).status_code == 200
+    assert client.get("/v1/tasks/" + reference).json()["current_version"] == 2
+    preview = client.get(f"/v1/operations/{op['operation_ref']}/preview").json()
+    assert (
+        client.post(
+            f"/v1/operations/{op['operation_ref']}/approvals",
+            json={"expected_digest": preview["digest"]},
+        ).status_code
+        == 200
+    )
+    assert client.post("/v1/tasks/" + reference + "/run").json()["verified_success"]
+    assert chat_send(client, "chat-transfer", "message-four", "改成100元", 3).status_code == 409
+
+
+def test_conversation_replan_recovers_after_process_error(client, monkeypatch):
+    created = chat_send(
+        client, "chat-recover", "message-one", "给小王转300元，至少保留1000元", 0
+    ).json()
+    reference = created["turns"][0]["task_ref"]
+    backend = client.app.state.backend
+    original = backend.run
+
+    def crash(*args):
+        raise RuntimeError("simulated crash after plan installation")
+
+    monkeypatch.setattr(backend, "run", crash)
+    with pytest.raises(RuntimeError):
+        chat_send(client, "chat-recover", "message-two", "改成200元", 1)
+    monkeypatch.setattr(backend, "run", original)
+    assert chat_send(client, "chat-recover", "message-three", "查询余额", 2).status_code == 409
+    recovered = chat_send(client, "chat-recover", "message-two", "改成200元", 1)
+    assert recovered.status_code == 200, recovered.text
+    assert recovered.json()["turns"][-1]["ready"]
+    assert client.get("/v1/tasks/" + reference).json()["current_version"] == 2
+
+
+def test_conversation_ownership_and_message_redaction(client):
+    first = chat_send(client, "chat-private", "message-one", "查询余额 token:private-value", 0)
+    assert first.status_code == 200, first.text
+    assert "private-value" not in first.text
+    backend = client.app.state.backend
+    backend.security.provision("other-user", "Other")
+    token = backend.security.issue_token("other-user")
+    headers = {"Authorization": "Bearer " + token}
+    assert client.get("/v1/conversations/chat-private", headers=headers).status_code == 404
+    assert (
+        client.post(
+            "/v1/conversations/chat-private/messages",
+            headers=headers,
+            json={"message_ref": "evil", "content": "查询余额", "expected_sequence": 1},
+        ).status_code
+        == 404
+    )
+    assert client.get("/v1/conversations", headers=headers).json() == []
+
+
+def test_conversation_clarifies_amount_and_preserves_original_task(client):
+    created = chat_send(
+        client, "chat-clarify", "message-one", "给小王转账，至少保留1000元", 0
+    ).json()
+    reference = created["turns"][0]["task_ref"]
+    assert client.get("/v1/tasks/" + reference).json()["status"] == "WAITING_CLARIFICATION"
+    clarified = chat_send(client, "chat-clarify", "message-two", "300元", 1)
+    assert clarified.status_code == 200, clarified.text
+    assert clarified.json()["turns"][-1]["task_ref"] == reference
+    task = client.get("/v1/tasks/" + reference).json()
+    assert task["status"] == "WAITING_APPROVAL"
+    assert task["operations"][0]["arguments"]["amount_minor"] == 30000
+    assert task["operations"][0]["arguments"]["minimum_remaining_balance_minor"] == 100000
+
+
+def test_conversation_serialization_and_read_scope(client):
+    backend = client.app.state.backend
+    with backend.db.task_lock("conversation:chat-locked") as acquired:
+        assert acquired
+        assert chat_send(client, "chat-locked", "message-one", "查询余额", 0).status_code == 409
+    assert chat_send(client, "chat-locked", "message-one", "查询余额", 0).status_code == 200
+    token = backend.security.issue_token("user-demo-001", ("tasks.write",))
+    assert (
+        client.post(
+            "/v1/conversations/chat-locked/messages",
+            headers={"Authorization": "Bearer " + token},
+            json={"message_ref": "message-two", "content": "查询余额", "expected_sequence": 1},
+        ).status_code
+        == 403
+    )
+    assert client.get("/v1/conversations?before=chat-locked").json() == []
